@@ -3,17 +3,12 @@
 import Image from "next/image";
 import { FormEvent, useMemo, useState } from "react";
 import { create } from "zustand";
+import { COUNTRIES, type Country } from "./data/countries";
 
 type Screen = "hub" | "flag-blitz";
 type Difficulty = "easy" | "medium" | "hard";
-type RoundState = "selecting" | "playing" | "answered" | "results";
-
-type Country = {
-  code: string;
-  name: string;
-  difficulty: Difficulty;
-  clue: string;
-};
+type GameMode = "classic" | "unlimited";
+type RoundState = "selecting-mode" | "selecting-difficulty" | "playing" | "answered" | "results";
 
 type AppStore = {
   screen: Screen;
@@ -29,30 +24,40 @@ const useAppStore = create<AppStore>((set) => ({
   recordPlay: () => set((state) => ({ totalPlays: state.totalPlays + 1 })),
 }));
 
-const COUNTRIES: readonly Country[] = [
-  { code: "gb", name: "United Kingdom", difficulty: "easy", clue: "A union of crosses in red, white, and blue." },
-  { code: "jp", name: "Japan", difficulty: "easy", clue: "A red sun on a white field." },
-  { code: "ca", name: "Canada", difficulty: "easy", clue: "Its central symbol is a maple leaf." },
-  { code: "br", name: "Brazil", difficulty: "easy", clue: "A starry blue globe sits inside a yellow diamond." },
-  { code: "za", name: "South Africa", difficulty: "medium", clue: "A colorful flag with a sideways Y shape." },
-  { code: "kr", name: "South Korea", difficulty: "medium", clue: "A red-and-blue circle is surrounded by four trigrams." },
-  { code: "mx", name: "Mexico", difficulty: "medium", clue: "An eagle and snake appear in the center." },
-  { code: "se", name: "Sweden", difficulty: "medium", clue: "A yellow Nordic cross on blue." },
-  { code: "bt", name: "Bhutan", difficulty: "hard", clue: "A white dragon crosses two diagonal color fields." },
-  { code: "kz", name: "Kazakhstan", difficulty: "hard", clue: "A golden eagle and sun on a turquoise field." },
-  { code: "sc", name: "Seychelles", difficulty: "hard", clue: "Five colored rays fan out from one corner." },
-  { code: "ki", name: "Kiribati", difficulty: "hard", clue: "A frigatebird flies above a rising sun and ocean waves." },
-] as const;
+const QUESTIONS_PER_GAME = 10;
+const SHOW_DEV_GAMES = process.env.NEXT_PUBLIC_PUZZLER_MODE === "dev";
 
 const DIFFICULTIES: ReadonlyArray<{
   id: Difficulty;
   label: string;
   description: string;
-  badge: string;
 }> = [
-  { id: "easy", label: "Easy", description: "Choose from four answers", badge: "4 choices" },
-  { id: "medium", label: "Medium", description: "Type the country, hints allowed", badge: "1 hint" },
-  { id: "hard", label: "Hard", description: "Type the country, no lifelines", badge: "No hints" },
+  { id: "easy", label: "Easy", description: "Choose from four answers" },
+  { id: "medium", label: "Medium", description: "Type the country, hints allowed" },
+  { id: "hard", label: "Hard", description: "Type the country, no lifelines" },
+];
+
+const GAME_MODES: ReadonlyArray<{
+  id: GameMode;
+  label: string;
+  description: string;
+  badge: string;
+  icon: string;
+}> = [
+  {
+    id: "classic",
+    label: "Classic",
+    description: "Ten flags. Build a score and finish the run.",
+    badge: "10 flags",
+    icon: "10",
+  },
+  {
+    id: "unlimited",
+    label: "Unlimited",
+    description: "Keep your streak alive. One wrong answer ends it.",
+    badge: "One life",
+    icon: "∞",
+  },
 ];
 
 const GAME_CARDS: ReadonlyArray<{
@@ -102,6 +107,16 @@ function shuffle<T>(items: readonly T[]): T[] {
 
 function normalize(value: string): string {
   return value.trim().toLowerCase();
+}
+
+function isCorrectAnswer(value: string, country: Country): boolean {
+  const normalizedAnswer = normalize(value);
+  return [country.name, ...country.aliases].some((name) => normalize(name) === normalizedAnswer);
+}
+
+function getCountryHint(country: Country): string {
+  const letterCount = country.name.replace(/[^\p{L}]/gu, "").length;
+  return `It starts with “${country.name[0]}” and has ${letterCount} letters.`;
 }
 
 function LogoMark() {
@@ -171,6 +186,8 @@ function GameCard({ game }: { game: (typeof GAME_CARDS)[number] }) {
 }
 
 function Hub() {
+  const visibleGames = SHOW_DEV_GAMES ? GAME_CARDS : GAME_CARDS.filter((game) => game.available);
+
   return (
     <main className="mx-auto min-h-[100dvh] w-full max-w-5xl px-5 pb-10 pt-[max(1.25rem,env(safe-area-inset-top))] sm:px-8">
       <HubHeader />
@@ -180,10 +197,10 @@ function Hub() {
             <p className="text-sm font-semibold text-slate-500">Quick games. Sharp minds.</p>
             <h2 id="games-heading" className="mt-1 text-3xl font-black tracking-tight text-white">Choose your challenge</h2>
           </div>
-          <span className="hidden rounded-full border border-slate-800 px-3 py-2 text-xs font-bold text-slate-500 sm:block">1 game live</span>
+          <span className="hidden rounded-full border border-slate-800 px-3 py-2 text-xs font-bold text-slate-500 sm:block">{SHOW_DEV_GAMES ? "Dev catalog" : "1 game live"}</span>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {GAME_CARDS.map((game) => <GameCard key={game.id} game={game} />)}
+          {visibleGames.map((game) => <GameCard key={game.id} game={game} />)}
         </div>
       </section>
       <footer className="mt-10 border-t border-slate-900 pt-5 text-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-700">
@@ -207,12 +224,49 @@ function GameTopBar({ streak, onBack }: { streak: number; onBack: () => void }) 
   );
 }
 
-function DifficultySelector({ onSelect }: { onSelect: (difficulty: Difficulty) => void }) {
+function GameModeSelector({ onSelect }: { onSelect: (mode: GameMode) => void }) {
+  return (
+    <section className="flex flex-1 flex-col justify-center py-8" aria-labelledby="game-mode-title">
+      <p className="text-xs font-black uppercase tracking-[0.25em] text-cyan-300">Flag Blitz</p>
+      <h1 id="game-mode-title" className="mt-2 text-4xl font-black tracking-tight text-white">Choose your run</h1>
+      <p className="mt-3 text-base leading-7 text-slate-400">Play a quick set or see how long your streak can last.</p>
+      <div className="mt-8 space-y-3">
+        {GAME_MODES.map((mode) => (
+          <button
+            key={mode.id}
+            type="button"
+            onClick={() => onSelect(mode.id)}
+            className="group flex min-h-24 w-full items-center gap-4 rounded-2xl border border-slate-800 bg-slate-900/70 p-4 text-left transition hover:border-cyan-300/40 hover:bg-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+          >
+            <span className="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-slate-800 text-2xl font-black text-cyan-300 group-hover:bg-cyan-300 group-hover:text-slate-950">{mode.icon}</span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-black text-white">{mode.label}</span>
+              <span className="mt-1 block text-sm leading-5 text-slate-500">{mode.description}</span>
+            </span>
+            <span className="rounded-full bg-slate-800 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">{mode.badge}</span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function DifficultySelector({ gameMode, onSelect, onBack }: {
+  gameMode: GameMode;
+  onSelect: (difficulty: Difficulty) => void;
+  onBack: () => void;
+}) {
+  const modeLabel = gameMode === "classic" ? "Classic · 10 flags" : "Unlimited · one life";
+  const badge = gameMode === "classic" ? "10 flags" : "unlimited";
+
   return (
     <section className="flex flex-1 flex-col justify-center py-8" aria-labelledby="difficulty-title">
-      <p className="text-xs font-black uppercase tracking-[0.25em] text-cyan-300">Select mode</p>
+      <button type="button" onClick={onBack} className="-ml-2 flex min-h-12 w-fit items-center gap-2 rounded-xl px-2 text-sm font-bold text-slate-400 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+        <span aria-hidden="true">←</span> Change run
+      </button>
+      <p className="mt-4 text-xs font-black uppercase tracking-[0.25em] text-cyan-300">{modeLabel}</p>
       <h1 id="difficulty-title" className="mt-2 text-4xl font-black tracking-tight text-white">How sharp are you?</h1>
-      <p className="mt-3 text-base leading-7 text-slate-400">Four flags stand between you and geography glory.</p>
+      <p className="mt-3 text-base leading-7 text-slate-400">Choose how you want to name each flag.</p>
       <div className="mt-8 space-y-3">
         {DIFFICULTIES.map((difficulty, index) => (
           <button
@@ -226,7 +280,7 @@ function DifficultySelector({ onSelect }: { onSelect: (difficulty: Difficulty) =
               <span className="block font-black text-white">{difficulty.label}</span>
               <span className="mt-1 block text-sm text-slate-500">{difficulty.description}</span>
             </span>
-            <span className="rounded-full bg-slate-800 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">{difficulty.badge}</span>
+            <span className="rounded-full bg-slate-800 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">{badge}</span>
           </button>
         ))}
       </div>
@@ -234,7 +288,21 @@ function DifficultySelector({ onSelect }: { onSelect: (difficulty: Difficulty) =
   );
 }
 
-function ProgressBar({ current, total }: { current: number; total: number }) {
+function ProgressBar({ current, total, gameMode }: { current: number; total: number; gameMode: GameMode }) {
+  if (gameMode === "unlimited") {
+    return (
+      <div className="mt-4">
+        <div className="mb-2 flex justify-between text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+          <span>Flag {current}</span>
+          <span className="text-cyan-300">Unlimited</span>
+        </div>
+        <div className="h-2 overflow-hidden rounded-full bg-slate-900">
+          <div className="h-full w-full animate-pulse bg-gradient-to-r from-cyan-300 via-blue-500 to-cyan-300" />
+        </div>
+      </div>
+    );
+  }
+
   const progress = Math.round(((current + 1) / total) * 100);
   return (
     <div className="mt-4">
@@ -251,11 +319,12 @@ function ProgressBar({ current, total }: { current: number; total: number }) {
 
 function FlagImage({ country }: { country: Country }) {
   return (
-    <div className="relative mx-auto aspect-[8/5] w-full max-w-sm overflow-hidden rounded-3xl border border-white/10 bg-slate-900 shadow-glow">
+    <div className="relative mx-auto aspect-[8/5] w-full max-w-sm overflow-hidden border border-white/10 bg-slate-900 shadow-glow">
       <Image
-        src={`https://flagcdn.com/w320/${country.code}.png`}
+        src={`https://flagcdn.com/${country.code}.svg`}
         alt={`Flag to identify for this question`}
         fill
+        unoptimized
         priority
         sizes="(max-width: 640px) calc(100vw - 40px), 384px"
         className="object-contain"
@@ -265,7 +334,34 @@ function FlagImage({ country }: { country: Country }) {
   );
 }
 
-function MultipleChoice({ options, disabled, onAnswer }: { options: Country[]; disabled: boolean; onAnswer: (answer: string) => void }) {
+function MultipleChoice({ options, answer, correctAnswer, disabled, wasCorrect, onAnswer }: {
+  options: Country[];
+  answer: string;
+  correctAnswer: string;
+  disabled: boolean;
+  wasCorrect: boolean | null;
+  onAnswer: (answer: string) => void;
+}) {
+  function choiceClassName(country: Country): string {
+    const base = "min-h-14 rounded-2xl border px-4 py-3 text-left font-bold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300";
+
+    if (!disabled) {
+      return `${base} border-slate-700 bg-slate-900 text-slate-100 hover:border-cyan-300/50 hover:bg-slate-800`;
+    }
+
+    if (country.name === answer) {
+      return wasCorrect
+        ? `${base} animate-answer-success border-emerald-300 bg-emerald-400 text-slate-950`
+        : `${base} animate-answer-shake border-rose-300 bg-rose-500 text-white`;
+    }
+
+    if (!wasCorrect && country.name === correctAnswer) {
+      return `${base} border-emerald-400/70 bg-emerald-400/15 text-emerald-200`;
+    }
+
+    return `${base} cursor-not-allowed border-slate-800 bg-slate-900/50 text-slate-500`;
+  }
+
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {options.map((country) => (
@@ -274,7 +370,7 @@ function MultipleChoice({ options, disabled, onAnswer }: { options: Country[]; d
           type="button"
           disabled={disabled}
           onClick={() => onAnswer(country.name)}
-          className="min-h-14 rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-left font-bold text-slate-100 transition hover:border-cyan-300/50 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+          className={choiceClassName(country)}
         >
           {country.name}
         </button>
@@ -283,16 +379,23 @@ function MultipleChoice({ options, disabled, onAnswer }: { options: Country[]; d
   );
 }
 
-function TextAnswer({ difficulty, hint, hintVisible, disabled, value, onChange, onHint, onSubmit }: {
+function TextAnswer({ difficulty, hint, hintVisible, disabled, wasCorrect, value, onChange, onHint, onSubmit }: {
   difficulty: Difficulty;
   hint: string;
   hintVisible: boolean;
   disabled: boolean;
+  wasCorrect: boolean | null;
   value: string;
   onChange: (value: string) => void;
   onHint: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
+  const submitButtonClass = wasCorrect === null
+    ? "bg-cyan-300 text-slate-950 hover:bg-cyan-200 disabled:bg-slate-800 disabled:text-slate-600"
+    : wasCorrect
+      ? "animate-answer-success bg-emerald-400 text-slate-950"
+      : "animate-answer-shake bg-rose-500 text-white";
+
   return (
     <form onSubmit={onSubmit} className="space-y-3">
       <label htmlFor="country-answer" className="sr-only">Country name</label>
@@ -317,29 +420,31 @@ function TextAnswer({ difficulty, hint, hintVisible, disabled, value, onChange, 
           {hintVisible && <p className="rounded-xl border border-amber-300/20 bg-amber-300/5 p-3 text-sm leading-6 text-amber-100">{hint}</p>}
         </div>
       )}
-      <button type="submit" disabled={disabled || normalize(value).length === 0} className="min-h-14 w-full rounded-2xl bg-cyan-300 px-5 font-black text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-100 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">
-        Lock in answer
+      <button type="submit" disabled={disabled || normalize(value).length === 0} className={`min-h-14 w-full rounded-2xl px-5 font-black transition disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-100 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950 ${submitButtonClass}`}>
+        {wasCorrect === null ? "Lock in answer" : wasCorrect ? "Correct!" : "Incorrect"}
       </button>
     </form>
   );
 }
 
-function AnswerFeedback({ correct, answer, isLast, onNext }: { correct: boolean; answer: string; isLast: boolean; onNext: () => void }) {
+function AnswerFeedback({ correct, answer, actionLabel, onNext }: { correct: boolean; answer: string; actionLabel: string; onNext: () => void }) {
   return (
-    <div role="status" aria-live="polite" className={`rounded-2xl border p-4 ${correct ? "border-emerald-400/30 bg-emerald-400/10" : "border-rose-400/30 bg-rose-400/10"}`}>
+    <div role="status" aria-live="polite" className={`rounded-2xl border p-4 ${correct ? "animate-answer-success border-emerald-400/30 bg-emerald-400/10" : "animate-answer-shake border-rose-400/30 bg-rose-400/10"}`}>
       <p className={`font-black ${correct ? "text-emerald-300" : "text-rose-300"}`}>{correct ? "Perfect call!" : "Not this time"}</p>
       <p className="mt-1 text-sm text-slate-300">The answer is <strong className="text-white">{answer}</strong>.</p>
       <button type="button" onClick={onNext} className="mt-4 min-h-12 w-full rounded-xl bg-white px-4 font-black text-slate-950 transition hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950">
-        {isLast ? "See results" : "Next flag"}
+        {actionLabel}
       </button>
     </div>
   );
 }
 
-function QuizRound({ difficulty, questions, index, answer, hintVisible, roundState, wasCorrect, onAnswerChange, onHint, onSubmit, onNext }: {
+function QuizRound({ gameMode, difficulty, questions, index, questionNumber, answer, hintVisible, roundState, wasCorrect, onAnswerChange, onHint, onSubmit, onNext }: {
+  gameMode: GameMode;
   difficulty: Difficulty;
   questions: Country[];
   index: number;
+  questionNumber: number;
   answer: string;
   hintVisible: boolean;
   roundState: RoundState;
@@ -351,11 +456,15 @@ function QuizRound({ difficulty, questions, index, answer, hintVisible, roundSta
 }) {
   const question = questions[index];
   const options = useMemo(() => {
-    const distractors = COUNTRIES.filter((country) => country.code !== question.code).slice(index, index + 3);
-    const padded = distractors.length === 3 ? distractors : COUNTRIES.filter((country) => country.code !== question.code).slice(0, 3);
-    return shuffle([question, ...padded]);
-  }, [index, question]);
+    const distractors = shuffle(COUNTRIES.filter((country) => country.code !== question.code)).slice(0, 3);
+    return shuffle([question, ...distractors]);
+  }, [question]);
   const answered = roundState === "answered";
+  const actionLabel = gameMode === "unlimited" && !wasCorrect
+    ? "See results"
+    : gameMode === "classic" && index === questions.length - 1
+      ? "See results"
+      : "Next flag";
 
   function submitText(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -364,62 +473,80 @@ function QuizRound({ difficulty, questions, index, answer, hintVisible, roundSta
 
   return (
     <section className="flex flex-1 flex-col py-4" aria-labelledby="quiz-question">
-      <ProgressBar current={index} total={questions.length} />
+      <ProgressBar current={gameMode === "classic" ? index : questionNumber} total={questions.length} gameMode={gameMode} />
       <div className="flex flex-1 flex-col justify-center py-7">
         <div className="mb-5 text-center">
-          <span className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">{difficulty} mode</span>
+          <span className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">{gameMode} · {difficulty}</span>
           <h1 id="quiz-question" className="mt-4 text-2xl font-black tracking-tight text-white">Which country flies this flag?</h1>
         </div>
         <FlagImage country={question} />
       </div>
+      {answered && wasCorrect !== null && (
+        <div className="mb-4">
+          <AnswerFeedback correct={wasCorrect} answer={question.name} actionLabel={actionLabel} onNext={onNext} />
+        </div>
+      )}
       <div className="pb-[max(0.25rem,env(safe-area-inset-bottom))]">
         {difficulty === "easy" ? (
-          <MultipleChoice options={options} disabled={answered} onAnswer={onSubmit} />
+          <MultipleChoice
+            options={options}
+            answer={answer}
+            correctAnswer={question.name}
+            disabled={answered}
+            wasCorrect={wasCorrect}
+            onAnswer={onSubmit}
+          />
         ) : (
           <TextAnswer
             difficulty={difficulty}
-            hint={question.clue}
+            hint={getCountryHint(question)}
             hintVisible={hintVisible}
             disabled={answered}
+            wasCorrect={wasCorrect}
             value={answer}
             onChange={onAnswerChange}
             onHint={onHint}
             onSubmit={submitText}
           />
         )}
-        {answered && wasCorrect !== null && (
-          <div className="mt-3">
-            <AnswerFeedback correct={wasCorrect} answer={question.name} isLast={index === questions.length - 1} onNext={onNext} />
-          </div>
-        )}
       </div>
     </section>
   );
 }
 
-function Results({ score, total, streak, difficulty, onReplay, onHub }: {
+function Results({ gameMode, score, total, streak, questionNumber, difficulty, onReplay, onHub }: {
+  gameMode: GameMode;
   score: number;
   total: number;
   streak: number;
+  questionNumber: number;
   difficulty: Difficulty;
   onReplay: () => void;
   onHub: () => void;
 }) {
-  const percent = Math.round((score / total) * 100);
+  const isUnlimited = gameMode === "unlimited";
+  const percent = isUnlimited ? 0 : Math.round((score / total) * 100);
+  const title = isUnlimited
+    ? score >= 25 ? "Streak legend!" : score >= 10 ? "Strong run!" : "Keep exploring!"
+    : percent >= 75 ? "Map master!" : percent >= 50 ? "Solid run!" : "Keep exploring!";
   return (
     <section className="flex flex-1 flex-col justify-center py-10 text-center" aria-labelledby="results-title">
       <div className="mx-auto grid h-24 w-24 place-items-center rounded-3xl border border-cyan-300/30 bg-cyan-300/10 text-4xl shadow-glow" aria-hidden="true">🏁</div>
       <p className="mt-7 text-xs font-black uppercase tracking-[0.25em] text-cyan-300">Run complete</p>
-      <h1 id="results-title" className="mt-2 text-4xl font-black tracking-tight text-white">{percent >= 75 ? "Map master!" : percent >= 50 ? "Solid run!" : "Keep exploring!"}</h1>
-      <p className="mx-auto mt-3 max-w-xs text-slate-400">You completed <span className="capitalize">{difficulty}</span> mode. Another run could put you on top.</p>
+      <h1 id="results-title" className="mt-2 text-4xl font-black tracking-tight text-white">{title}</h1>
+      <p className="mx-auto mt-3 max-w-xs text-slate-400">
+        {isUnlimited
+          ? `Your run ended on flag ${questionNumber}. One miss ends the streak.`
+          : <>You completed <span className="capitalize">{difficulty}</span> mode. Another run could put you on top.</>}
+      </p>
       <div className="mx-auto mt-8 grid w-full max-w-sm grid-cols-2 gap-3">
         <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-          <p className="text-3xl font-black text-white">{score}<span className="text-lg text-slate-600">/{total}</span></p>
-          <p className="mt-1 text-xs font-bold uppercase tracking-wider text-slate-500">Score</p>
+          <p className="text-3xl font-black text-white">{score}{!isUnlimited && <span className="text-lg text-slate-600">/{total}</span>}</p>
+          <p className="mt-1 text-xs font-bold uppercase tracking-wider text-slate-500">{isUnlimited ? "Correct flags" : "Score"}</p>
         </div>
         <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-          <p className="text-3xl font-black text-amber-300">{streak}</p>
-          <p className="mt-1 text-xs font-bold uppercase tracking-wider text-slate-500">Final streak</p>
+          <p className="text-3xl font-black text-amber-300">{isUnlimited ? questionNumber : streak}</p>
+          <p className="mt-1 text-xs font-bold uppercase tracking-wider text-slate-500">{isUnlimited ? "Run ended on" : "Final streak"}</p>
         </div>
       </div>
       <div className="mx-auto mt-8 w-full max-w-sm space-y-3">
@@ -433,22 +560,32 @@ function Results({ score, total, streak, difficulty, onReplay, onHub }: {
 function FlagBlitz() {
   const navigate = useAppStore((state) => state.navigate);
   const recordPlay = useAppStore((state) => state.recordPlay);
+  const [gameMode, setGameMode] = useState<GameMode | null>(null);
   const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
   const [questions, setQuestions] = useState<Country[]>([]);
-  const [roundState, setRoundState] = useState<RoundState>("selecting");
+  const [roundState, setRoundState] = useState<RoundState>("selecting-mode");
   const [index, setIndex] = useState(0);
+  const [questionNumber, setQuestionNumber] = useState(1);
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
   const [answer, setAnswer] = useState("");
   const [hintVisible, setHintVisible] = useState(false);
   const [wasCorrect, setWasCorrect] = useState<boolean | null>(null);
 
+  function selectGameMode(selectedGameMode: GameMode) {
+    setGameMode(selectedGameMode);
+    setDifficulty(null);
+    setRoundState("selecting-difficulty");
+  }
+
   function startGame(selectedDifficulty: Difficulty) {
-    const pool = COUNTRIES.filter((country) => country.difficulty === selectedDifficulty);
+    if (!gameMode) return;
+
     setDifficulty(selectedDifficulty);
-    setQuestions(shuffle(pool));
+    setQuestions(gameMode === "classic" ? shuffle(COUNTRIES).slice(0, QUESTIONS_PER_GAME) : shuffle(COUNTRIES));
     setRoundState("playing");
     setIndex(0);
+    setQuestionNumber(1);
     setScore(0);
     setStreak(0);
     setAnswer("");
@@ -459,7 +596,8 @@ function FlagBlitz() {
 
   function submitAnswer(value: string) {
     if (roundState !== "playing") return;
-    const correct = normalize(value) === normalize(questions[index].name);
+    const correct = isCorrectAnswer(value, questions[index]);
+    setAnswer(value);
     setWasCorrect(correct);
     setScore((current) => current + (correct ? 1 : 0));
     setStreak((current) => (correct ? current + 1 : 0));
@@ -467,11 +605,24 @@ function FlagBlitz() {
   }
 
   function nextQuestion() {
-    if (index === questions.length - 1) {
+    if (gameMode === "unlimited" && !wasCorrect) {
       setRoundState("results");
       return;
     }
-    setIndex((current) => current + 1);
+
+    if (gameMode === "classic" && index === questions.length - 1) {
+      setRoundState("results");
+      return;
+    }
+
+    if (gameMode === "unlimited" && index === questions.length - 1) {
+      setQuestions(shuffle(COUNTRIES));
+      setIndex(0);
+    } else {
+      setIndex((current) => current + 1);
+    }
+
+    setQuestionNumber((current) => current + 1);
     setAnswer("");
     setHintVisible(false);
     setWasCorrect(null);
@@ -485,12 +636,17 @@ function FlagBlitz() {
   return (
     <main className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-8">
       <GameTopBar streak={streak} onBack={backToHub} />
-      {roundState === "selecting" && <DifficultySelector onSelect={startGame} />}
-      {difficulty && (roundState === "playing" || roundState === "answered") && questions.length > 0 && (
+      {roundState === "selecting-mode" && <GameModeSelector onSelect={selectGameMode} />}
+      {gameMode && roundState === "selecting-difficulty" && (
+        <DifficultySelector gameMode={gameMode} onSelect={startGame} onBack={() => setRoundState("selecting-mode")} />
+      )}
+      {gameMode && difficulty && (roundState === "playing" || roundState === "answered") && questions.length > 0 && (
         <QuizRound
+          gameMode={gameMode}
           difficulty={difficulty}
           questions={questions}
           index={index}
+          questionNumber={questionNumber}
           answer={answer}
           hintVisible={hintVisible}
           roundState={roundState}
@@ -501,8 +657,8 @@ function FlagBlitz() {
           onNext={nextQuestion}
         />
       )}
-      {difficulty && roundState === "results" && (
-        <Results score={score} total={questions.length} streak={streak} difficulty={difficulty} onReplay={() => startGame(difficulty)} onHub={backToHub} />
+      {gameMode && difficulty && roundState === "results" && (
+        <Results gameMode={gameMode} score={score} total={questions.length} streak={streak} questionNumber={questionNumber} difficulty={difficulty} onReplay={() => startGame(difficulty)} onHub={backToHub} />
       )}
     </main>
   );
