@@ -28,6 +28,13 @@ const GAME_MODES: ReadonlyArray<{
     badge: "60 seconds",
     icon: "60",
   },
+  {
+    id: "speed-match-unlimited",
+    label: "Speed Match Unlimited",
+    description: "Keep finding flags on a live board that never runs out.",
+    badge: "9 live flags",
+    icon: "∞",
+  },
 ];
 
 export function GameModeSelector({ onSelect }: { onSelect: (mode: GameMode) => void }) {
