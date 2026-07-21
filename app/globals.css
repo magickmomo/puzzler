@@ -61,6 +61,42 @@ input {
   }
 }
 
+@keyframes answer-error {
+  0% {
+    transform: translateX(0);
+    border-color: rgb(253 164 175);
+    background-color: rgb(244 63 94 / 0.35);
+  }
+  5% {
+    transform: translateX(-8px);
+  }
+  10% {
+    transform: translateX(7px);
+  }
+  15% {
+    transform: translateX(-6px);
+  }
+  20% {
+    transform: translateX(5px);
+  }
+  25% {
+    transform: translateX(-3px);
+  }
+  30% {
+    transform: translateX(0);
+  }
+  65% {
+    transform: translateX(0);
+    border-color: rgb(253 164 175 / 0.6);
+    background-color: rgb(244 63 94 / 0.15);
+  }
+  100% {
+    transform: translateX(0);
+    border-color: rgb(51 65 85);
+    background-color: rgb(15 23 42);
+  }
+}
+
 .animate-answer-success {
   animation: answer-success 380ms cubic-bezier(0.2, 0.9, 0.25, 1.25);
 }
@@ -69,9 +105,14 @@ input {
   animation: answer-shake 420ms ease-in-out;
 }
 
+.animate-answer-error {
+  animation: answer-error 1.8s ease-out forwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-answer-success,
-  .animate-answer-shake {
+  .animate-answer-shake,
+  .animate-answer-error {
     animation: none;
   }
 }
