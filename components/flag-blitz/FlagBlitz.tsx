@@ -1,12 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { Country } from "@/app/data/countries";
 import {
   createQuestionDeck,
   createSpeedMatchTargetDeck,
+  createSpeedMatchUnlimitedColumns,
   getNextRoundAction,
   getUpdatedScore,
   isCorrectAnswer,
+  pickSpeedMatchTarget,
+  SPEED_MATCH_UNLIMITED_QUEUED_FLAGS,
+  SPEED_MATCH_UNLIMITED_VISIBLE_FLAGS,
   type Difficulty,
   type GameMode,
 } from "@/lib/flag-quiz";
@@ -19,6 +24,10 @@ import { SpeedMatchRound } from "./SpeedMatchRound";
 
 type RoundState = "selecting-mode" | "selecting-difficulty" | "playing" | "answered" | "results";
 
+function isSpeedMatchMode(gameMode: GameMode | null): gameMode is "speed-match" | "speed-match-unlimited" {
+  return gameMode === "speed-match" || gameMode === "speed-match-unlimited";
+}
+
 export function FlagBlitz({ onBack }: { onBack: () => void }) {
   const recordPlay = usePuzzlerStore((state) => state.recordPlay);
   const recordResult = usePuzzlerStore((state) => state.recordResult);
@@ -26,6 +35,12 @@ export function FlagBlitz({ onBack }: { onBack: () => void }) {
   const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
   const [questions, setQuestions] = useState<ReturnType<typeof createQuestionDeck>>([]);
   const [speedMatchTargets, setSpeedMatchTargets] = useState<ReturnType<typeof createQuestionDeck>>([]);
+  const [speedMatchColumns, setSpeedMatchColumns] = useState<Country[][]>([]);
+  const [speedMatchQueuedFlags, setSpeedMatchQueuedFlags] = useState<Country[]>([]);
+  const [speedMatchTarget, setSpeedMatchTarget] = useState<Country | null>(null);
+  const [speedMatchDeckIndex, setSpeedMatchDeckIndex] = useState(0);
+  const [removingCode, setRemovingCode] = useState<string | null>(null);
+  const [promotedCodes, setPromotedCodes] = useState<string[]>([]);
   const [roundState, setRoundState] = useState<RoundState>("selecting-mode");
   const [index, setIndex] = useState(0);
   const [questionNumber, setQuestionNumber] = useState(1);
@@ -37,9 +52,26 @@ export function FlagBlitz({ onBack }: { onBack: () => void }) {
   const [matchedCodes, setMatchedCodes] = useState<string[]>([]);
   const [incorrectCodes, setIncorrectCodes] = useState<string[]>([]);
   const [timeLeft, setTimeLeft] = useState(60);
+  const transitionTimerRef = useRef<number | null>(null);
+  const promotionTimerRef = useRef<number | null>(null);
+  const gameIdRef = useRef(0);
+
+  function clearBoardTransition() {
+    if (transitionTimerRef.current !== null) {
+      window.clearTimeout(transitionTimerRef.current);
+      transitionTimerRef.current = null;
+    }
+
+    if (promotionTimerRef.current !== null) {
+      window.clearTimeout(promotionTimerRef.current);
+      promotionTimerRef.current = null;
+    }
+  }
+
+  useEffect(() => () => clearBoardTransition(), []);
 
   function selectGameMode(selectedGameMode: GameMode) {
-    if (selectedGameMode === "speed-match") {
+    if (isSpeedMatchMode(selectedGameMode)) {
       beginGame(selectedGameMode, null);
       return;
     }
@@ -51,11 +83,27 @@ export function FlagBlitz({ onBack }: { onBack: () => void }) {
 
   function beginGame(selectedGameMode: GameMode, selectedDifficulty: Difficulty | null) {
     const nextQuestions = createQuestionDeck(selectedGameMode);
+    const isSpeedMatchUnlimited = selectedGameMode === "speed-match-unlimited";
+    const initialVisibleFlags = isSpeedMatchUnlimited
+      ? nextQuestions.slice(0, SPEED_MATCH_UNLIMITED_VISIBLE_FLAGS)
+      : [];
+    const initialColumns = createSpeedMatchUnlimitedColumns(initialVisibleFlags);
+    const initialQueuedFlags = isSpeedMatchUnlimited
+      ? nextQuestions.slice(SPEED_MATCH_UNLIMITED_VISIBLE_FLAGS, SPEED_MATCH_UNLIMITED_VISIBLE_FLAGS + SPEED_MATCH_UNLIMITED_QUEUED_FLAGS)
+      : [];
 
+    gameIdRef.current += 1;
+    clearBoardTransition();
     setGameMode(selectedGameMode);
     setDifficulty(selectedDifficulty);
     setQuestions(nextQuestions);
     setSpeedMatchTargets(selectedGameMode === "speed-match" ? createSpeedMatchTargetDeck(nextQuestions) : []);
+    setSpeedMatchColumns(initialColumns);
+    setSpeedMatchQueuedFlags(initialQueuedFlags);
+    setSpeedMatchTarget(pickSpeedMatchTarget(initialVisibleFlags));
+    setSpeedMatchDeckIndex(initialVisibleFlags.length + initialQueuedFlags.length);
+    setRemovingCode(null);
+    setPromotedCodes([]);
     setRoundState("playing");
     setIndex(0);
     setQuestionNumber(1);
@@ -89,13 +137,14 @@ export function FlagBlitz({ onBack }: { onBack: () => void }) {
 
   function finishGame() {
     if (!gameMode) return;
+    clearBoardTransition();
     recordResult(gameMode, score);
     setRoundState("results");
   }
 
   function selectSpeedMatchFlag(countryCode: string) {
-    const target = speedMatchTargets[index];
-    if (gameMode !== "speed-match" || roundState !== "playing" || !target) return;
+    const target = gameMode === "speed-match-unlimited" ? speedMatchTarget : speedMatchTargets[index];
+    if (!isSpeedMatchMode(gameMode) || roundState !== "playing" || !target || removingCode) return;
 
     if (countryCode !== target.code) {
       setIncorrectCodes((current) => current.includes(countryCode) ? current : [...current, countryCode]);
@@ -109,9 +158,71 @@ export function FlagBlitz({ onBack }: { onBack: () => void }) {
 
     const nextScore = score + 1;
     setIncorrectCodes([]);
-    setMatchedCodes((current) => [...current, countryCode]);
     setScore(nextScore);
     setStreak((current) => current + 1);
+
+    if (gameMode === "speed-match-unlimited") {
+      const columnIndex = speedMatchColumns.findIndex((column) => column.some((country) => country.code === countryCode));
+      const flagIndex = speedMatchColumns[columnIndex]?.findIndex((country) => country.code === countryCode) ?? -1;
+      const queuedFlag = speedMatchQueuedFlags[columnIndex];
+
+      if (columnIndex === -1 || flagIndex === -1 || !queuedFlag) return;
+
+      const shiftedCodes = [
+        ...speedMatchColumns[columnIndex].slice(flagIndex + 1),
+        queuedFlag,
+      ].map((country) => country.code);
+      const nextColumns = speedMatchColumns.map((column, currentColumnIndex) => (
+        currentColumnIndex === columnIndex
+          ? [...column.slice(0, flagIndex), ...column.slice(flagIndex + 1), queuedFlag]
+          : column
+      ));
+      const occupiedCodes = new Set([
+        ...nextColumns.flat().map((country) => country.code),
+        ...speedMatchQueuedFlags
+          .filter((_, currentColumnIndex) => currentColumnIndex !== columnIndex)
+          .map((country) => country.code),
+      ]);
+      let nextDeck = questions;
+      let replacementIndex = nextDeck.findIndex((country, currentIndex) => (
+        currentIndex >= speedMatchDeckIndex
+        && !occupiedCodes.has(country.code)
+      ));
+
+      if (replacementIndex === -1) {
+        nextDeck = createQuestionDeck("unlimited");
+        replacementIndex = nextDeck.findIndex((country) => !occupiedCodes.has(country.code));
+      }
+
+      const replacementFlag = nextDeck[replacementIndex];
+      const nextQueuedFlags = replacementFlag
+        ? speedMatchQueuedFlags.map((country, currentColumnIndex) => currentColumnIndex === columnIndex ? replacementFlag : country)
+        : speedMatchQueuedFlags;
+      const nextVisibleFlags = nextColumns.flat();
+      const gameId = gameIdRef.current;
+
+      setRemovingCode(countryCode);
+      transitionTimerRef.current = window.setTimeout(() => {
+        if (gameIdRef.current !== gameId) return;
+
+        setQuestions(nextDeck);
+        setSpeedMatchDeckIndex(replacementIndex + 1);
+        setSpeedMatchColumns(nextColumns);
+        setSpeedMatchQueuedFlags(nextQueuedFlags);
+        setSpeedMatchTarget(pickSpeedMatchTarget(nextVisibleFlags));
+        setRemovingCode(null);
+        setPromotedCodes(shiftedCodes);
+        transitionTimerRef.current = null;
+        promotionTimerRef.current = window.setTimeout(() => {
+          if (gameIdRef.current !== gameId) return;
+          setPromotedCodes([]);
+          promotionTimerRef.current = null;
+        }, 380);
+      }, 360);
+      return;
+    }
+
+    setMatchedCodes((current) => [...current, countryCode]);
 
     if (index === speedMatchTargets.length - 1) {
       recordResult("speed-match", nextScore);
@@ -152,7 +263,7 @@ export function FlagBlitz({ onBack }: { onBack: () => void }) {
   }
 
   useEffect(() => {
-    if (gameMode !== "speed-match" || roundState !== "playing") return;
+    if (!isSpeedMatchMode(gameMode) || roundState !== "playing") return;
 
     if (timeLeft === 0) {
       finishGame();
@@ -163,8 +274,11 @@ export function FlagBlitz({ onBack }: { onBack: () => void }) {
     return () => window.clearTimeout(timer);
   }, [gameMode, roundState, timeLeft, score]);
 
-  const headerValue = gameMode === "speed-match" ? score : streak;
-  const headerLabel = gameMode === "speed-match" ? `${score} flags found` : `${streak} answer streak`;
+  const speedMatchActive = isSpeedMatchMode(gameMode);
+  const activeSpeedMatchFlags = gameMode === "speed-match-unlimited" ? speedMatchColumns.flat() : questions;
+  const activeSpeedMatchTarget = gameMode === "speed-match-unlimited" ? speedMatchTarget : speedMatchTargets[index];
+  const headerValue = speedMatchActive ? score : streak;
+  const headerLabel = speedMatchActive ? `${score} flags found` : `${streak} answer streak`;
 
   return (
     <main className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-8">
@@ -181,7 +295,7 @@ export function FlagBlitz({ onBack }: { onBack: () => void }) {
       {gameMode && roundState === "selecting-difficulty" && (
         <DifficultySelector gameMode={gameMode} onSelect={startGame} onBack={() => setRoundState("selecting-mode")} />
       )}
-      {gameMode && gameMode !== "speed-match" && difficulty && (roundState === "playing" || roundState === "answered") && questions.length > 0 && (
+      {gameMode && !speedMatchActive && difficulty && (roundState === "playing" || roundState === "answered") && questions.length > 0 && (
         <QuizRound
           gameMode={gameMode}
           difficulty={difficulty}
@@ -198,19 +312,24 @@ export function FlagBlitz({ onBack }: { onBack: () => void }) {
           onNext={nextQuestion}
         />
       )}
-      {gameMode === "speed-match" && roundState === "playing" && questions.length > 0 && speedMatchTargets.length > 0 && (
+      {speedMatchActive && roundState === "playing" && activeSpeedMatchFlags.length > 0 && activeSpeedMatchTarget && (
         <SpeedMatchRound
-          flags={questions}
-          targets={speedMatchTargets}
-          targetIndex={index}
+          flags={activeSpeedMatchFlags}
+          target={activeSpeedMatchTarget}
           timeLeft={timeLeft}
           score={score}
+          total={gameMode === "speed-match" ? questions.length : null}
           matchedCodes={matchedCodes}
           incorrectCodes={incorrectCodes}
+          removingCode={removingCode}
+          isUnlimited={gameMode === "speed-match-unlimited"}
+          columns={gameMode === "speed-match-unlimited" ? speedMatchColumns : null}
+          queuedFlags={gameMode === "speed-match-unlimited" ? speedMatchQueuedFlags : null}
+          promotedCodes={promotedCodes}
           onSelect={(country) => selectSpeedMatchFlag(country.code)}
         />
       )}
-      {gameMode && (difficulty || gameMode === "speed-match") && roundState === "results" && (
+      {gameMode && (difficulty || speedMatchActive) && roundState === "results" && (
         <Results
           gameMode={gameMode}
           score={score}

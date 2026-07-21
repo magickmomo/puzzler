@@ -2,12 +2,15 @@ import { describe, expect, it } from "vitest";
 import { COUNTRIES } from "@/app/data/countries";
 import {
   QUESTIONS_PER_GAME,
+  SPEED_MATCH_UNLIMITED_VISIBLE_FLAGS,
   createQuestionDeck,
   createSpeedMatchTargetDeck,
+  createSpeedMatchUnlimitedColumns,
   getNextRoundAction,
   getUpdatedScore,
   isCorrectAnswer,
   normalizeAnswer,
+  pickSpeedMatchTarget,
 } from "./flag-quiz";
 
 describe("answer normalization", () => {
@@ -60,6 +63,21 @@ describe("quiz decks", () => {
     expect(targets).toHaveLength(board.length);
     expect(new Set(targets.map((country) => country.code))).toEqual(new Set(board.map((country) => country.code)));
     expect(targets.map((country) => country.code)).not.toEqual(board.map((country) => country.code));
+  });
+
+  it("creates a full source deck and a visible target for Speed Match Unlimited", () => {
+    const deck = createQuestionDeck("speed-match-unlimited");
+    const visibleFlags = deck.slice(0, SPEED_MATCH_UNLIMITED_VISIBLE_FLAGS);
+    const target = pickSpeedMatchTarget(visibleFlags);
+    const columns = createSpeedMatchUnlimitedColumns(visibleFlags);
+
+    expect(deck).toHaveLength(COUNTRIES.length);
+    expect(visibleFlags).toHaveLength(SPEED_MATCH_UNLIMITED_VISIBLE_FLAGS);
+    expect(columns).toHaveLength(3);
+    expect(columns.every((column) => column.length === 3)).toBe(true);
+    expect(new Set(columns.flat().map((country) => country.code))).toEqual(new Set(visibleFlags.map((country) => country.code)));
+    expect(target).not.toBeNull();
+    expect(visibleFlags.map((country) => country.code)).toContain(target!.code);
   });
 });
 

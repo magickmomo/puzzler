@@ -1,7 +1,7 @@
 import { COUNTRIES, type Country } from "@/app/data/countries";
 
 export type Difficulty = "easy" | "medium" | "hard";
-export type GameMode = "classic" | "unlimited" | "speed-match";
+export type GameMode = "classic" | "unlimited" | "speed-match" | "speed-match-unlimited";
 export type NextRoundAction = "next" | "reshuffle" | "results";
 
 export type ScoreState = {
@@ -10,6 +10,9 @@ export type ScoreState = {
 };
 
 export const QUESTIONS_PER_GAME = 10;
+export const SPEED_MATCH_UNLIMITED_VISIBLE_FLAGS = 9;
+export const SPEED_MATCH_UNLIMITED_COLUMN_COUNT = 3;
+export const SPEED_MATCH_UNLIMITED_QUEUED_FLAGS = SPEED_MATCH_UNLIMITED_COLUMN_COUNT;
 
 export function shuffle<T>(items: readonly T[]): T[] {
   return [...items]
@@ -20,7 +23,7 @@ export function shuffle<T>(items: readonly T[]): T[] {
 
 export function createQuestionDeck(gameMode: GameMode): Country[] {
   const deck = shuffle(COUNTRIES);
-  return gameMode === "unlimited" ? deck : deck.slice(0, QUESTIONS_PER_GAME);
+  return gameMode === "unlimited" || gameMode === "speed-match-unlimited" ? deck : deck.slice(0, QUESTIONS_PER_GAME);
 }
 
 export function createSpeedMatchTargetDeck(board: readonly Country[]): Country[] {
@@ -31,6 +34,16 @@ export function createSpeedMatchTargetDeck(board: readonly Country[]): Country[]
   }
 
   return [...targets.slice(1), targets[0]];
+}
+
+export function pickSpeedMatchTarget(visibleFlags: readonly Country[]): Country | null {
+  return shuffle(visibleFlags)[0] ?? null;
+}
+
+export function createSpeedMatchUnlimitedColumns(visibleFlags: readonly Country[]): Country[][] {
+  return Array.from({ length: SPEED_MATCH_UNLIMITED_COLUMN_COUNT }, (_, columnIndex) => (
+    visibleFlags.filter((_, flagIndex) => flagIndex % SPEED_MATCH_UNLIMITED_COLUMN_COUNT === columnIndex)
+  ));
 }
 
 export function createMultipleChoiceOptions(question: Country): Country[] {
