@@ -23,6 +23,16 @@ export function createQuestionDeck(gameMode: GameMode): Country[] {
   return gameMode === "unlimited" ? deck : deck.slice(0, QUESTIONS_PER_GAME);
 }
 
+export function createSpeedMatchTargetDeck(board: readonly Country[]): Country[] {
+  const targets = shuffle(board);
+
+  if (targets.length < 2 || targets.some((country, index) => country.code !== board[index]?.code)) {
+    return targets;
+  }
+
+  return [...targets.slice(1), targets[0]];
+}
+
 export function createMultipleChoiceOptions(question: Country): Country[] {
   const distractors = shuffle(COUNTRIES.filter((country) => country.code !== question.code)).slice(0, 3);
   return shuffle([question, ...distractors]);

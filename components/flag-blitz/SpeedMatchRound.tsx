@@ -3,6 +3,7 @@ import type { Country } from "@/app/data/countries";
 
 export function SpeedMatchRound({
   flags,
+  targets,
   targetIndex,
   timeLeft,
   score,
@@ -11,6 +12,7 @@ export function SpeedMatchRound({
   onSelect,
 }: {
   flags: Country[];
+  targets: Country[];
   targetIndex: number;
   timeLeft: number;
   score: number;
@@ -18,7 +20,7 @@ export function SpeedMatchRound({
   incorrectCodes: string[];
   onSelect: (country: Country) => void;
 }) {
-  const target = flags[targetIndex];
+  const target = targets[targetIndex];
 
   function tileClassName(country: Country): string {
     const base = "relative aspect-[4/3] min-h-14 overflow-hidden border p-1.5 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300";
