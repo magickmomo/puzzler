@@ -3,6 +3,7 @@ import { COUNTRIES } from "@/app/data/countries";
 import {
   QUESTIONS_PER_GAME,
   createQuestionDeck,
+  createSpeedMatchTargetDeck,
   getNextRoundAction,
   getUpdatedScore,
   isCorrectAnswer,
@@ -50,6 +51,15 @@ describe("quiz decks", () => {
 
     expect(deck).toHaveLength(QUESTIONS_PER_GAME);
     expect(new Set(deck.map((country) => country.code)).size).toBe(QUESTIONS_PER_GAME);
+  });
+
+  it("uses a separate target order for Speed Match", () => {
+    const board = COUNTRIES.slice(0, QUESTIONS_PER_GAME);
+    const targets = createSpeedMatchTargetDeck(board);
+
+    expect(targets).toHaveLength(board.length);
+    expect(new Set(targets.map((country) => country.code))).toEqual(new Set(board.map((country) => country.code)));
+    expect(targets.map((country) => country.code)).not.toEqual(board.map((country) => country.code));
   });
 });
 

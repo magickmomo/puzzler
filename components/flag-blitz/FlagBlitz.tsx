@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   createQuestionDeck,
+  createSpeedMatchTargetDeck,
   getNextRoundAction,
   getUpdatedScore,
   isCorrectAnswer,
@@ -24,6 +25,7 @@ export function FlagBlitz({ onBack }: { onBack: () => void }) {
   const [gameMode, setGameMode] = useState<GameMode | null>(null);
   const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
   const [questions, setQuestions] = useState<ReturnType<typeof createQuestionDeck>>([]);
+  const [speedMatchTargets, setSpeedMatchTargets] = useState<ReturnType<typeof createQuestionDeck>>([]);
   const [roundState, setRoundState] = useState<RoundState>("selecting-mode");
   const [index, setIndex] = useState(0);
   const [questionNumber, setQuestionNumber] = useState(1);
@@ -48,9 +50,12 @@ export function FlagBlitz({ onBack }: { onBack: () => void }) {
   }
 
   function beginGame(selectedGameMode: GameMode, selectedDifficulty: Difficulty | null) {
+    const nextQuestions = createQuestionDeck(selectedGameMode);
+
     setGameMode(selectedGameMode);
     setDifficulty(selectedDifficulty);
-    setQuestions(createQuestionDeck(selectedGameMode));
+    setQuestions(nextQuestions);
+    setSpeedMatchTargets(selectedGameMode === "speed-match" ? createSpeedMatchTargetDeck(nextQuestions) : []);
     setRoundState("playing");
     setIndex(0);
     setQuestionNumber(1);
@@ -89,9 +94,10 @@ export function FlagBlitz({ onBack }: { onBack: () => void }) {
   }
 
   function selectSpeedMatchFlag(countryCode: string) {
-    if (gameMode !== "speed-match" || roundState !== "playing" || !questions[index]) return;
+    const target = speedMatchTargets[index];
+    if (gameMode !== "speed-match" || roundState !== "playing" || !target) return;
 
-    if (countryCode !== questions[index].code) {
+    if (countryCode !== target.code) {
       setIncorrectCodes((current) => current.includes(countryCode) ? current : [...current, countryCode]);
       setStreak(0);
 
@@ -107,7 +113,7 @@ export function FlagBlitz({ onBack }: { onBack: () => void }) {
     setScore(nextScore);
     setStreak((current) => current + 1);
 
-    if (index === questions.length - 1) {
+    if (index === speedMatchTargets.length - 1) {
       recordResult("speed-match", nextScore);
       setRoundState("results");
       return;
@@ -192,9 +198,10 @@ export function FlagBlitz({ onBack }: { onBack: () => void }) {
           onNext={nextQuestion}
         />
       )}
-      {gameMode === "speed-match" && roundState === "playing" && questions.length > 0 && (
+      {gameMode === "speed-match" && roundState === "playing" && questions.length > 0 && speedMatchTargets.length > 0 && (
         <SpeedMatchRound
           flags={questions}
+          targets={speedMatchTargets}
           targetIndex={index}
           timeLeft={timeLeft}
           score={score}
