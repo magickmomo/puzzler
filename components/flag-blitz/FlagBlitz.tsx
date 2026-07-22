@@ -51,9 +51,12 @@ export function FlagBlitz({ onBack }: { onBack: () => void }) {
   const [wasCorrect, setWasCorrect] = useState<boolean | null>(null);
   const [matchedCodes, setMatchedCodes] = useState<string[]>([]);
   const [incorrectCodes, setIncorrectCodes] = useState<string[]>([]);
+  const [wrongFlagName, setWrongFlagName] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(60);
   const transitionTimerRef = useRef<number | null>(null);
   const promotionTimerRef = useRef<number | null>(null);
+  const wrongFlagTimerRef = useRef<number | null>(null);
+  const timerDeadlineRef = useRef<number | null>(null);
   const gameIdRef = useRef(0);
 
   function clearBoardTransition() {
@@ -65,6 +68,11 @@ export function FlagBlitz({ onBack }: { onBack: () => void }) {
     if (promotionTimerRef.current !== null) {
       window.clearTimeout(promotionTimerRef.current);
       promotionTimerRef.current = null;
+    }
+
+    if (wrongFlagTimerRef.current !== null) {
+      window.clearTimeout(wrongFlagTimerRef.current);
+      wrongFlagTimerRef.current = null;
     }
   }
 
@@ -94,6 +102,7 @@ export function FlagBlitz({ onBack }: { onBack: () => void }) {
 
     gameIdRef.current += 1;
     clearBoardTransition();
+    timerDeadlineRef.current = Date.now() + 60_000;
     setGameMode(selectedGameMode);
     setDifficulty(selectedDifficulty);
     setQuestions(nextQuestions);
@@ -114,6 +123,7 @@ export function FlagBlitz({ onBack }: { onBack: () => void }) {
     setWasCorrect(null);
     setMatchedCodes([]);
     setIncorrectCodes([]);
+    setWrongFlagName(null);
     setTimeLeft(60);
     recordPlay();
   }
@@ -138,19 +148,35 @@ export function FlagBlitz({ onBack }: { onBack: () => void }) {
   function finishGame() {
     if (!gameMode) return;
     clearBoardTransition();
+    timerDeadlineRef.current = null;
     recordResult(gameMode, score);
     setRoundState("results");
   }
 
   function selectSpeedMatchFlag(countryCode: string) {
     const target = gameMode === "speed-match-unlimited" ? speedMatchTarget : speedMatchTargets[index];
+    const selectedFlag = gameMode === "speed-match-unlimited"
+      ? speedMatchColumns.flat().find((country) => country.code === countryCode)
+      : questions.find((country) => country.code === countryCode);
     if (!isSpeedMatchMode(gameMode) || roundState !== "playing" || !target || removingCode) return;
 
     if (countryCode !== target.code) {
+      const gameId = gameIdRef.current;
       setIncorrectCodes((current) => current.includes(countryCode) ? current : [...current, countryCode]);
       setStreak(0);
 
+      if (selectedFlag) {
+        if (wrongFlagTimerRef.current !== null) window.clearTimeout(wrongFlagTimerRef.current);
+        setWrongFlagName(selectedFlag.name);
+        wrongFlagTimerRef.current = window.setTimeout(() => {
+          if (gameIdRef.current !== gameId) return;
+          setWrongFlagName(null);
+          wrongFlagTimerRef.current = null;
+        }, 1_800);
+      }
+
       window.setTimeout(() => {
+        if (gameIdRef.current !== gameId) return;
         setIncorrectCodes((current) => current.filter((code) => code !== countryCode));
       }, 1800);
       return;
@@ -158,10 +184,20 @@ export function FlagBlitz({ onBack }: { onBack: () => void }) {
 
     const nextScore = score + 1;
     setIncorrectCodes([]);
+    if (wrongFlagTimerRef.current !== null) {
+      window.clearTimeout(wrongFlagTimerRef.current);
+      wrongFlagTimerRef.current = null;
+    }
+    setWrongFlagName(null);
     setScore(nextScore);
     setStreak((current) => current + 1);
 
     if (gameMode === "speed-match-unlimited") {
+      if (timerDeadlineRef.current !== null) {
+        timerDeadlineRef.current += 2_000;
+        setTimeLeft((current) => current + 2);
+      }
+
       const columnIndex = speedMatchColumns.findIndex((column) => column.some((country) => country.code === countryCode));
       const flagIndex = speedMatchColumns[columnIndex]?.findIndex((country) => country.code === countryCode) ?? -1;
       const queuedFlag = speedMatchQueuedFlags[columnIndex];
@@ -265,14 +301,20 @@ export function FlagBlitz({ onBack }: { onBack: () => void }) {
   useEffect(() => {
     if (!isSpeedMatchMode(gameMode) || roundState !== "playing") return;
 
-    if (timeLeft === 0) {
-      finishGame();
-      return;
+    function syncTimer() {
+      if (timerDeadlineRef.current === null) return;
+      const nextTimeLeft = Math.max(0, Math.ceil((timerDeadlineRef.current - Date.now()) / 1_000));
+      setTimeLeft((current) => current === nextTimeLeft ? current : nextTimeLeft);
     }
 
-    const timer = window.setTimeout(() => setTimeLeft((current) => current - 1), 1000);
-    return () => window.clearTimeout(timer);
-  }, [gameMode, roundState, timeLeft, score]);
+    syncTimer();
+    const timer = window.setInterval(syncTimer, 250);
+    return () => window.clearInterval(timer);
+  }, [gameMode, roundState]);
+
+  useEffect(() => {
+    if (isSpeedMatchMode(gameMode) && roundState === "playing" && timeLeft === 0) finishGame();
+  }, [gameMode, roundState, timeLeft]);
 
   const speedMatchActive = isSpeedMatchMode(gameMode);
   const activeSpeedMatchFlags = gameMode === "speed-match-unlimited" ? speedMatchColumns.flat() : questions;
@@ -326,6 +368,7 @@ export function FlagBlitz({ onBack }: { onBack: () => void }) {
           columns={gameMode === "speed-match-unlimited" ? speedMatchColumns : null}
           queuedFlags={gameMode === "speed-match-unlimited" ? speedMatchQueuedFlags : null}
           promotedCodes={promotedCodes}
+          wrongFlagName={wrongFlagName}
           onSelect={(country) => selectSpeedMatchFlag(country.code)}
         />
       )}

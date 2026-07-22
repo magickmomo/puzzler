@@ -29,6 +29,10 @@ npm run build
 
 GitHub Actions runs these checks for pull requests and pushes to `main`.
 
+## Changelog
+
+The in-app **What's New** screen is curated in `app/data/changelog.ts`. Add the newest player-facing summary first whenever a GitHub change reaches Puzzler, and reference the matching commit hash so players can inspect the technical change if they want to.
+
 ## Vercel configuration
 
 By default, the dashboard only shows Flag Blitz. To reveal the upcoming Word Grid and Number Drop cards in a development deployment, set this Vercel environment variable and redeploy:

@@ -14,6 +14,7 @@ export function SpeedMatchRound({
   columns,
   queuedFlags,
   promotedCodes,
+  wrongFlagName,
   onSelect,
 }: {
   flags: Country[];
@@ -28,6 +29,7 @@ export function SpeedMatchRound({
   columns: Country[][] | null;
   queuedFlags: Country[] | null;
   promotedCodes: string[];
+  wrongFlagName: string | null;
   onSelect: (country: Country) => void;
 }) {
   function tileClassName(country: Country, isPromoted: boolean): string {
@@ -60,7 +62,7 @@ export function SpeedMatchRound({
         disabled={isMatched || isIncorrect || removingCode !== null || timeLeft === 0}
         onClick={() => onSelect(country)}
         className={tileClassName(country, isPromoted)}
-        aria-label={isLeaving || isMatched ? `Flag option ${index + 1}, correct` : isIncorrect ? `Flag option ${index + 1}, incorrect` : `Flag option ${index + 1}`}
+        aria-label={isLeaving || isMatched ? `Flag option ${index + 1}, correct` : isIncorrect ? `Flag option ${index + 1}, ${country.name}, incorrect` : `Flag option ${index + 1}`}
       >
         <Image
           src={`https://flagcdn.com/${country.code}.svg`}
@@ -71,6 +73,11 @@ export function SpeedMatchRound({
           className="object-contain"
         />
         <span className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-white/10" />
+        {isIncorrect && (
+          <span aria-hidden="true" className="pointer-events-none absolute inset-0 grid place-items-center bg-rose-950/80 p-2 text-center text-sm font-black leading-tight text-rose-50 sm:text-base">
+            <span className="break-words">{country.name}</span>
+          </span>
+        )}
       </button>
     );
   }
@@ -89,6 +96,9 @@ export function SpeedMatchRound({
       <div className="py-5 text-center">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Find this country</p>
         <h1 id="speed-match-target" aria-live="polite" className="mt-2 text-3xl font-black tracking-tight text-white">{target.name}</h1>
+        <p className="mt-2 min-h-6 text-base font-black text-rose-300" aria-live="polite" aria-atomic="true">
+          {wrongFlagName && <span className="animate-wrong-flag">That was {wrongFlagName}</span>}
+        </p>
       </div>
       {isUnlimited && columns && queuedFlags ? (
         <div className="grid grid-cols-3 gap-2 pb-[max(0.25rem,env(safe-area-inset-bottom))]" role="group" aria-label="Nine selectable flags and three queued flags">
