@@ -16,7 +16,7 @@ const GAME_MODES: ReadonlyArray<{
   },
   {
     id: "unlimited",
-    label: "Unlimited",
+    label: "Classic Unlimited",
     description: "Keep your streak alive. One wrong answer ends it.",
     badge: "One life",
     icon: "∞",

@@ -31,7 +31,7 @@ export const CHANGELOG_ENTRIES: readonly ChangelogEntry[] = [
   {
     date: "July 21, 2026",
     title: "More ways to play Flag Blitz",
-    summary: "Flag Blitz grew into a modular game with Classic, Unlimited, and Speed Match runs.",
+    summary: "Flag Blitz grew into a modular game with Classic, Classic Unlimited, and Speed Match runs.",
     highlights: [
       "Player records are saved locally on your device.",
       "Answers support country aliases, punctuation, and accents.",
@@ -45,7 +45,7 @@ export const CHANGELOG_ENTRIES: readonly ChangelogEntry[] = [
     summary: "The first mobile-first Puzzler arcade experience went live with Flag Blitz.",
     highlights: [
       "Country flags are served as sharp SVG assets.",
-      "Classic and Unlimited quiz foundations arrived.",
+      "Classic and Classic Unlimited quiz foundations arrived.",
     ],
     commit: "dbd1c02",
   },

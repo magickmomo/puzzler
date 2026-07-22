@@ -62,7 +62,7 @@ export function QuizRound({
       <ProgressBar current={gameMode === "classic" ? index : questionNumber} total={questions.length} gameMode={gameMode} />
       <div className="flex flex-1 flex-col justify-center py-7">
         <div className="mb-5 text-center">
-          <span className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">{gameMode} · {difficulty}</span>
+          <span className="rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">{gameMode === "unlimited" ? "Classic Unlimited" : "Classic"} · {difficulty}</span>
           <h1 id="quiz-question" className="mt-4 text-2xl font-black tracking-tight text-white">Which country flies this flag?</h1>
         </div>
         <FlagImage country={question} />

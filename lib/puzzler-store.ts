@@ -3,8 +3,13 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { GameMode } from "./flag-quiz";
+import {
+  createEmptyFlagStatsByMode,
+  recordFlagAttempt as updateFlagAttempt,
+  type FlagStatsByMode,
+} from "./flag-report";
 
-type Screen = "hub" | "flag-blitz" | "changelog";
+type Screen = "hub" | "flag-blitz" | "changelog" | "flag-report";
 
 type PuzzlerStore = {
   screen: Screen;
@@ -12,9 +17,11 @@ type PuzzlerStore = {
   bestClassicScore: number;
   bestUnlimitedStreak: number;
   bestSpeedMatchScore: number;
+  flagStatsByMode: FlagStatsByMode;
   navigate: (screen: Screen) => void;
   recordPlay: () => void;
   recordResult: (gameMode: GameMode, score: number) => void;
+  recordFlagAttempt: (gameMode: GameMode, countryCode: string, correct: boolean) => void;
 };
 
 export const usePuzzlerStore = create<PuzzlerStore>()(
@@ -25,6 +32,7 @@ export const usePuzzlerStore = create<PuzzlerStore>()(
       bestClassicScore: 0,
       bestUnlimitedStreak: 0,
       bestSpeedMatchScore: 0,
+      flagStatsByMode: createEmptyFlagStatsByMode(),
       navigate: (screen) => set({ screen }),
       recordPlay: () => set((state) => ({ totalPlays: state.totalPlays + 1 })),
       recordResult: (gameMode, score) => set((state) => {
@@ -38,6 +46,9 @@ export const usePuzzlerStore = create<PuzzlerStore>()(
 
         return { bestSpeedMatchScore: Math.max(state.bestSpeedMatchScore, score) };
       }),
+      recordFlagAttempt: (gameMode, countryCode, correct) => set((state) => ({
+        flagStatsByMode: updateFlagAttempt(state.flagStatsByMode, gameMode, countryCode, correct),
+      })),
     }),
     {
       name: "puzzler-player-records",
@@ -46,6 +57,7 @@ export const usePuzzlerStore = create<PuzzlerStore>()(
         bestClassicScore: state.bestClassicScore,
         bestUnlimitedStreak: state.bestUnlimitedStreak,
         bestSpeedMatchScore: state.bestSpeedMatchScore,
+        flagStatsByMode: state.flagStatsByMode,
       }),
     },
   ),
