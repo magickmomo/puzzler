@@ -10,13 +10,21 @@ export type ScoreState = {
 };
 
 export const QUESTIONS_PER_GAME = 10;
+export const SPEED_MATCH_TIME_LIMIT_MS = 60_000;
 export const SPEED_MATCH_UNLIMITED_VISIBLE_FLAGS = 9;
 export const SPEED_MATCH_UNLIMITED_COLUMN_COUNT = 3;
 export const SPEED_MATCH_UNLIMITED_QUEUED_FLAGS = SPEED_MATCH_UNLIMITED_COLUMN_COUNT;
-export const SPEED_MATCH_TIME_BONUS_MS = 2_000;
 
 export function getTimeLeft(deadline: number, now = Date.now()): number {
   return Math.max(0, Math.ceil((deadline - now) / 1_000));
+}
+
+export function getRemainingDuration(deadline: number, now = Date.now()): number {
+  return Math.max(0, deadline - now);
+}
+
+export function restoreDeadline(remainingDuration: number, now = Date.now()): number {
+  return now + Math.max(0, remainingDuration);
 }
 
 export function shuffle<T>(items: readonly T[]): T[] {
@@ -26,8 +34,8 @@ export function shuffle<T>(items: readonly T[]): T[] {
     .map(({ item }) => item);
 }
 
-export function createQuestionDeck(gameMode: GameMode): Country[] {
-  const deck = shuffle(COUNTRIES);
+export function createQuestionDeck(gameMode: GameMode, countries: readonly Country[] = COUNTRIES): Country[] {
+  const deck = shuffle(countries);
   return gameMode === "unlimited" || gameMode === "speed-match-unlimited" ? deck : deck.slice(0, QUESTIONS_PER_GAME);
 }
 
@@ -51,8 +59,8 @@ export function createSpeedMatchUnlimitedColumns(visibleFlags: readonly Country[
   ));
 }
 
-export function createMultipleChoiceOptions(question: Country): Country[] {
-  const distractors = shuffle(COUNTRIES.filter((country) => country.code !== question.code)).slice(0, 3);
+export function createMultipleChoiceOptions(question: Country, countries: readonly Country[] = COUNTRIES): Country[] {
+  const distractors = shuffle(countries.filter((country) => country.code !== question.code)).slice(0, 3);
   return shuffle([question, ...distractors]);
 }
 

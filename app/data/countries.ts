@@ -6,7 +6,7 @@ export type Country = {
 
 type CountryRecord = readonly [code: string, name: string, aliases?: readonly string[]];
 
-// 193 United Nations member states, plus the Holy See and the State of Palestine.
+// 193 United Nations member states, plus the Holy See, the State of Palestine, and three UK home nations.
 const COUNTRY_DATA: readonly CountryRecord[] = [
   ["af", "Afghanistan"], ["al", "Albania"], ["dz", "Algeria"], ["ad", "Andorra"], ["ao", "Angola"],
   ["ag", "Antigua and Barbuda"], ["ar", "Argentina"], ["am", "Armenia"], ["au", "Australia"], ["at", "Austria"],
@@ -18,7 +18,7 @@ const COUNTRY_DATA: readonly CountryRecord[] = [
   ["cn", "China"], ["co", "Colombia"], ["km", "Comoros"], ["cg", "Republic of the Congo", ["Congo", "Congo-Brazzaville"]], ["cd", "Democratic Republic of the Congo", ["DR Congo", "Congo-Kinshasa"]],
   ["cr", "Costa Rica"], ["ci", "Côte d'Ivoire", ["Cote d'Ivoire", "Ivory Coast"]], ["hr", "Croatia"], ["cu", "Cuba"], ["cy", "Cyprus"],
   ["cz", "Czechia", ["Czech Republic"]], ["dk", "Denmark"], ["dj", "Djibouti"], ["dm", "Dominica"], ["do", "Dominican Republic"],
-  ["ec", "Ecuador"], ["eg", "Egypt"], ["sv", "El Salvador"], ["gq", "Equatorial Guinea"], ["er", "Eritrea"],
+  ["ec", "Ecuador"], ["eg", "Egypt"], ["sv", "El Salvador"], ["gb-eng", "England"], ["gq", "Equatorial Guinea"], ["er", "Eritrea"],
   ["ee", "Estonia"], ["sz", "Eswatini", ["Swaziland"]], ["et", "Ethiopia"], ["fj", "Fiji"], ["fi", "Finland"],
   ["fr", "France"], ["ga", "Gabon"], ["gm", "Gambia", ["The Gambia"]], ["ge", "Georgia"], ["de", "Germany"],
   ["gh", "Ghana"], ["gr", "Greece"], ["gd", "Grenada"], ["gt", "Guatemala"], ["gn", "Guinea"],
@@ -38,14 +38,14 @@ const COUNTRY_DATA: readonly CountryRecord[] = [
   ["py", "Paraguay"], ["pe", "Peru"], ["ph", "Philippines", ["The Philippines"]], ["pl", "Poland"], ["pt", "Portugal"],
   ["qa", "Qatar"], ["ro", "Romania"], ["ru", "Russia", ["Russian Federation"]], ["rw", "Rwanda"], ["kn", "Saint Kitts and Nevis"],
   ["lc", "Saint Lucia"], ["vc", "Saint Vincent and the Grenadines"], ["ws", "Samoa"], ["sm", "San Marino"], ["st", "Sao Tome and Principe", ["São Tomé and Príncipe"]],
-  ["sa", "Saudi Arabia"], ["sn", "Senegal"], ["rs", "Serbia"], ["sc", "Seychelles"], ["sl", "Sierra Leone"],
+  ["sa", "Saudi Arabia"], ["gb-sct", "Scotland"], ["sn", "Senegal"], ["rs", "Serbia"], ["sc", "Seychelles"], ["sl", "Sierra Leone"],
   ["sg", "Singapore"], ["sk", "Slovakia"], ["si", "Slovenia"], ["sb", "Solomon Islands"], ["so", "Somalia"],
   ["za", "South Africa"], ["ss", "South Sudan"], ["es", "Spain"], ["lk", "Sri Lanka"], ["sd", "Sudan"],
   ["sr", "Suriname"], ["se", "Sweden"], ["ch", "Switzerland"], ["sy", "Syria", ["Syrian Arab Republic"]], ["tj", "Tajikistan"],
   ["tz", "Tanzania", ["United Republic of Tanzania"]], ["th", "Thailand"], ["tl", "Timor-Leste", ["East Timor"]], ["tg", "Togo"], ["to", "Tonga"],
   ["tt", "Trinidad and Tobago"], ["tn", "Tunisia"], ["tr", "Türkiye", ["Turkey"]], ["tm", "Turkmenistan"], ["tv", "Tuvalu"],
   ["ug", "Uganda"], ["ua", "Ukraine"], ["ae", "United Arab Emirates", ["UAE"]], ["gb", "United Kingdom", ["UK", "Great Britain"]], ["us", "United States", ["United States of America", "USA", "US"]],
-  ["uy", "Uruguay"], ["uz", "Uzbekistan"], ["vu", "Vanuatu"], ["va", "Vatican City", ["Holy See", "Vatican"]], ["ve", "Venezuela", ["Venezuela, Bolivarian Republic of"]],
+  ["uy", "Uruguay"], ["uz", "Uzbekistan"], ["vu", "Vanuatu"], ["va", "Vatican City", ["Holy See", "Vatican"]], ["ve", "Venezuela", ["Venezuela, Bolivarian Republic of"]], ["gb-wls", "Wales"],
   ["vn", "Vietnam", ["Viet Nam"]], ["ye", "Yemen"], ["zm", "Zambia"], ["zw", "Zimbabwe"], ["ps", "Palestine", ["State of Palestine"]],
 ];
 

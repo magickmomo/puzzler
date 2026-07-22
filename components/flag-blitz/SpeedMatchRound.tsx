@@ -19,7 +19,7 @@ export function SpeedMatchRound({
 }: {
   flags: Country[];
   target: Country;
-  timeLeft: number;
+  timeLeft: number | null;
   score: number;
   total: number | null;
   matchedCodes: string[];
@@ -86,12 +86,14 @@ export function SpeedMatchRound({
     <section className="flex flex-1 flex-col py-4" aria-labelledby="speed-match-target">
       <div className="flex items-center justify-between gap-3 border-b border-slate-900 pb-4">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-rose-300">{isUnlimited ? "Speed Match Unlimited" : "Speed Match"}</p>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-rose-300">{isUnlimited ? "Flag Match Unlimited" : "Speed Match"}</p>
           <p className="mt-1 text-sm font-semibold text-slate-500">{isUnlimited ? `${score} found · ${flags.length} live` : `${score} of ${total} found`}</p>
         </div>
-        <time className={`grid min-h-14 min-w-20 place-items-center border px-3 text-2xl font-black tabular-nums ${timeLeft <= 10 ? "animate-pulse border-rose-400/70 bg-rose-400/10 text-rose-300" : "border-cyan-300/30 bg-cyan-300/10 text-cyan-300"}`} dateTime={`PT${timeLeft}S`} aria-label={`${timeLeft} seconds remaining`}>
-          {timeLeft}s
-        </time>
+        {timeLeft !== null && (
+          <time className={`grid min-h-14 min-w-20 place-items-center border px-3 text-2xl font-black tabular-nums ${timeLeft <= 10 ? "animate-pulse border-rose-400/70 bg-rose-400/10 text-rose-300" : "border-cyan-300/30 bg-cyan-300/10 text-cyan-300"}`} dateTime={`PT${timeLeft}S`} aria-label={`${timeLeft} seconds remaining`}>
+            {timeLeft}s
+          </time>
+        )}
       </div>
       <div className="py-5 text-center">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Find this country</p>

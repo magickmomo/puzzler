@@ -24,7 +24,7 @@ export const FLAG_REPORT_MODE_LABELS: Record<FlagReportFilter, string> = {
   classic: "Classic",
   unlimited: "Classic Unlimited",
   "speed-match": "Speed Match",
-  "speed-match-unlimited": "Speed Match Unlimited",
+  "speed-match-unlimited": "Flag Match Unlimited",
 };
 
 export function createEmptyFlagStatsByMode(): FlagStatsByMode {

@@ -1,21 +1,37 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { FlagBlitz } from "@/components/flag-blitz/FlagBlitz";
 import { Changelog } from "@/components/Changelog";
 import { FlagReport } from "@/components/FlagReport";
+import { Settings } from "@/components/Settings";
 import { usePuzzlerStore } from "@/lib/puzzler-store";
 
 type GameCardConfig = {
-  id: "flag-blitz" | "word-grid" | "number-drop";
+  id: "flag-blitz" | "capital-cities" | "number-drop";
   title: string;
   eyebrow: string;
   description: string;
   accent: string;
-  icon: string;
+  icon: ReactNode;
   available: boolean;
 };
 
 const SHOW_DEV_GAMES = process.env.NEXT_PUBLIC_PUZZLER_MODE === "dev";
+
+function EiffelTowerIcon() {
+  return (
+    <svg viewBox="0 0 64 64" className="h-8 w-8" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M17 56h30" />
+      <path d="M23 56 31 8h2l8 48" />
+      <path d="M20 39h24" />
+      <path d="M18 47h28" />
+      <path d="M26 25h12" />
+      <path d="m27 18 5 5 5-5" />
+      <path d="M25 56 32 39l7 17" />
+    </svg>
+  );
+}
 
 const GAME_CARDS: readonly GameCardConfig[] = [
   {
@@ -28,12 +44,12 @@ const GAME_CARDS: readonly GameCardConfig[] = [
     available: true,
   },
   {
-    id: "word-grid",
-    title: "Word Grid",
+    id: "capital-cities",
+    title: "Match Capital Cities",
     eyebrow: "Coming soon",
-    description: "Connect letters and uncover hidden words.",
+    description: "Match every country to its capital and build a world-class run.",
     accent: "from-violet-400 to-fuchsia-500",
-    icon: "Aa",
+    icon: <EiffelTowerIcon />,
     available: false,
   },
   {
@@ -58,14 +74,19 @@ function LogoMark() {
   );
 }
 
-function HubHeader() {
+function HubHeader({ onOpenChangelog }: { onOpenChangelog: () => void }) {
   return (
-    <header className="flex items-center gap-3 pb-10 pt-2">
-      <LogoMark />
-      <div>
-        <p className="text-xs font-bold uppercase tracking-[0.28em] text-cyan-300">Pocket arcade</p>
-        <h1 className="text-2xl font-black tracking-tight text-white">Puzzler</h1>
+    <header className="flex items-center justify-between gap-3 pb-10 pt-2">
+      <div className="flex min-w-0 items-center gap-3">
+        <LogoMark />
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.28em] text-cyan-300">Pocket arcade</p>
+          <h1 className="text-2xl font-black tracking-tight text-white">Puzzler</h1>
+        </div>
       </div>
+      <button type="button" onClick={onOpenChangelog} className="flex min-h-12 shrink-0 items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/60 px-3 text-xs font-black uppercase tracking-wide text-slate-300 transition hover:border-cyan-300/50 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+        <span aria-hidden="true">✦</span> What&apos;s new
+      </button>
     </header>
   );
 }
@@ -103,87 +124,46 @@ function GameCard({ game, onLaunch }: { game: GameCardConfig; onLaunch: () => vo
   return <button type="button" onClick={onLaunch} className={`${commonClasses} w-full border-slate-700/80 bg-slate-900/80 hover:-translate-y-1 hover:border-cyan-300/40 hover:bg-slate-900`}>{content}</button>;
 }
 
-function PlayerStats() {
-  const totalPlays = usePuzzlerStore((state) => state.totalPlays);
-  const bestClassicScore = usePuzzlerStore((state) => state.bestClassicScore);
-  const bestUnlimitedStreak = usePuzzlerStore((state) => state.bestUnlimitedStreak);
-  const bestSpeedMatchScore = usePuzzlerStore((state) => state.bestSpeedMatchScore);
-
-  return (
-    <section className="mt-8" aria-labelledby="records-title">
-      <p id="records-title" className="text-xs font-black uppercase tracking-[0.2em] text-slate-600">Your records</p>
-      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <div className="rounded-xl border border-slate-900 bg-slate-900/45 p-3 text-center">
-          <p className="text-lg font-black text-white">{totalPlays}</p>
-          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Runs</p>
-        </div>
-        <div className="rounded-xl border border-slate-900 bg-slate-900/45 p-3 text-center">
-          <p className="text-lg font-black text-cyan-300">{bestClassicScore}</p>
-          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Best 10</p>
-        </div>
-        <div className="rounded-xl border border-slate-900 bg-slate-900/45 p-3 text-center">
-          <p className="text-lg font-black text-amber-300">{bestUnlimitedStreak}</p>
-          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Best streak</p>
-        </div>
-        <div className="rounded-xl border border-slate-900 bg-slate-900/45 p-3 text-center">
-          <p className="text-lg font-black text-rose-300">{bestSpeedMatchScore}</p>
-          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Best speed</p>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function Hub({ onLaunchFlagBlitz, onOpenChangelog, onOpenFlagReport }: { onLaunchFlagBlitz: () => void; onOpenChangelog: () => void; onOpenFlagReport: () => void }) {
-  const visibleGames = SHOW_DEV_GAMES ? GAME_CARDS : GAME_CARDS.filter((game) => game.available);
+function Hub({ onLaunchFlagBlitz, onOpenChangelog }: { onLaunchFlagBlitz: () => void; onOpenChangelog: () => void }) {
+  const visibleGames = SHOW_DEV_GAMES ? GAME_CARDS : GAME_CARDS.filter((game) => game.available || game.id === "capital-cities");
 
   return (
     <main className="mx-auto min-h-[100dvh] w-full max-w-5xl px-5 pb-10 pt-[max(1.25rem,env(safe-area-inset-top))] sm:px-8">
-      <HubHeader />
+      <HubHeader onOpenChangelog={onOpenChangelog} />
       <section aria-labelledby="games-heading">
         <div className="mb-5 flex items-end justify-between gap-4">
           <div>
             <p className="text-sm font-semibold text-slate-500">Quick games. Sharp minds.</p>
             <h2 id="games-heading" className="mt-1 text-3xl font-black tracking-tight text-white">Choose your challenge</h2>
           </div>
-          <span className="hidden rounded-full border border-slate-800 px-3 py-2 text-xs font-bold text-slate-500 sm:block">{SHOW_DEV_GAMES ? "Dev catalog" : "1 game live"}</span>
+          <span className="hidden rounded-full border border-slate-800 px-3 py-2 text-xs font-bold text-slate-500 sm:block">{SHOW_DEV_GAMES ? "Dev catalog" : "1 live · 1 soon"}</span>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {visibleGames.map((game) => <GameCard key={game.id} game={game} onLaunch={onLaunchFlagBlitz} />)}
         </div>
       </section>
-      <PlayerStats />
-      <button type="button" onClick={onOpenFlagReport} className="group mt-5 flex min-h-14 w-full items-center justify-between rounded-2xl border border-rose-400/25 bg-rose-400/5 px-5 text-left transition hover:border-rose-300/60 hover:bg-rose-400/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-300">
-        <span>
-          <span className="block text-sm font-black text-white">Flag Report</span>
-          <span className="mt-1 block text-xs font-semibold text-slate-500">See the flags that need another look.</span>
-        </span>
-        <span className="text-xl text-rose-300 transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
-      </button>
-      <button type="button" onClick={onOpenChangelog} className="group mt-5 flex min-h-14 w-full items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/60 px-5 text-left transition hover:border-cyan-300/40 hover:bg-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
-        <span>
-          <span className="block text-sm font-black text-white">What&apos;s new</span>
-          <span className="mt-1 block text-xs font-semibold text-slate-500">See the latest Puzzler updates and release notes.</span>
-        </span>
-        <span className="text-xl text-cyan-300 transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
-      </button>
       <footer className="mt-10 border-t border-slate-900 pt-5 text-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-700">New games loading</footer>
     </main>
   );
 }
 
 export default function PuzzlerApp() {
-  const screen = usePuzzlerStore((state) => state.screen);
-  const navigate = usePuzzlerStore((state) => state.navigate);
+  const route = usePuzzlerStore((state) => state.route);
+  const goHome = usePuzzlerStore((state) => state.goHome);
+  const openChangelog = usePuzzlerStore((state) => state.openChangelog);
+  const openFlagBlitz = usePuzzlerStore((state) => state.openFlagBlitz);
 
   return (
-    <div className="min-h-[100dvh] overflow-x-hidden bg-slate-950 text-slate-50 antialiased">
+    <div className="min-h-[100dvh] bg-slate-950 text-slate-50 antialiased">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top,rgba(8,145,178,0.12),transparent_34rem)]" />
       <div className="relative">
-        {screen === "hub" && <Hub onLaunchFlagBlitz={() => navigate("flag-blitz")} onOpenChangelog={() => navigate("changelog")} onOpenFlagReport={() => navigate("flag-report")} />}
-        {screen === "flag-blitz" && <FlagBlitz onBack={() => navigate("hub")} />}
-        {screen === "changelog" && <Changelog onBack={() => navigate("hub")} />}
-        {screen === "flag-report" && <FlagReport onBack={() => navigate("hub")} />}
+        {route.screen === "hub" && <Hub onLaunchFlagBlitz={() => openFlagBlitz()} onOpenChangelog={openChangelog} />}
+        {route.screen === "changelog" && <Changelog onBack={goHome} />}
+        {route.screen === "game" && route.gameId === "flag-blitz" && route.view === "play" && (
+          <FlagBlitz onBack={goHome} onOpenReport={() => openFlagBlitz("report")} onOpenSettings={() => openFlagBlitz("settings")} />
+        )}
+        {route.screen === "game" && route.gameId === "flag-blitz" && route.view === "report" && <FlagReport onBack={() => openFlagBlitz("play")} />}
+        {route.screen === "game" && route.gameId === "flag-blitz" && route.view === "settings" && <Settings onBack={() => openFlagBlitz("play")} />}
       </div>
     </div>
   );
