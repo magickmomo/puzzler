@@ -4,7 +4,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { GameMode } from "./flag-quiz";
 
-type Screen = "hub" | "flag-blitz";
+type Screen = "hub" | "flag-blitz" | "changelog";
 
 type PuzzlerStore = {
   screen: Screen;

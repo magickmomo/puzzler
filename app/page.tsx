@@ -1,6 +1,7 @@
 "use client";
 
 import { FlagBlitz } from "@/components/flag-blitz/FlagBlitz";
+import { Changelog } from "@/components/Changelog";
 import { usePuzzlerStore } from "@/lib/puzzler-store";
 
 type GameCardConfig = {
@@ -132,7 +133,7 @@ function PlayerStats() {
   );
 }
 
-function Hub({ onLaunchFlagBlitz }: { onLaunchFlagBlitz: () => void }) {
+function Hub({ onLaunchFlagBlitz, onOpenChangelog }: { onLaunchFlagBlitz: () => void; onOpenChangelog: () => void }) {
   const visibleGames = SHOW_DEV_GAMES ? GAME_CARDS : GAME_CARDS.filter((game) => game.available);
 
   return (
@@ -151,6 +152,13 @@ function Hub({ onLaunchFlagBlitz }: { onLaunchFlagBlitz: () => void }) {
         </div>
       </section>
       <PlayerStats />
+      <button type="button" onClick={onOpenChangelog} className="group mt-5 flex min-h-14 w-full items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/60 px-5 text-left transition hover:border-cyan-300/40 hover:bg-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+        <span>
+          <span className="block text-sm font-black text-white">What&apos;s new</span>
+          <span className="mt-1 block text-xs font-semibold text-slate-500">See the latest Puzzler updates and release notes.</span>
+        </span>
+        <span className="text-xl text-cyan-300 transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
+      </button>
       <footer className="mt-10 border-t border-slate-900 pt-5 text-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-700">New games loading</footer>
     </main>
   );
@@ -164,7 +172,9 @@ export default function PuzzlerApp() {
     <div className="min-h-[100dvh] overflow-x-hidden bg-slate-950 text-slate-50 antialiased">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top,rgba(8,145,178,0.12),transparent_34rem)]" />
       <div className="relative">
-        {screen === "hub" ? <Hub onLaunchFlagBlitz={() => navigate("flag-blitz")} /> : <FlagBlitz onBack={() => navigate("hub")} />}
+        {screen === "hub" && <Hub onLaunchFlagBlitz={() => navigate("flag-blitz")} onOpenChangelog={() => navigate("changelog")} />}
+        {screen === "flag-blitz" && <FlagBlitz onBack={() => navigate("hub")} />}
+        {screen === "changelog" && <Changelog onBack={() => navigate("hub")} />}
       </div>
     </div>
   );

@@ -123,6 +123,25 @@ input {
   }
 }
 
+@keyframes wrong-flag-flash {
+  0% {
+    transform: scale(0.92);
+    opacity: 0;
+  }
+  25% {
+    transform: scale(1.04);
+    opacity: 1;
+  }
+  55% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+}
+
 .animate-answer-success {
   animation: answer-success 380ms cubic-bezier(0.2, 0.9, 0.25, 1.25);
 }
@@ -143,12 +162,18 @@ input {
   animation: flag-promote 380ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
+.animate-wrong-flag {
+  display: inline-block;
+  animation: wrong-flag-flash 1.8s ease-out both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-answer-success,
   .animate-answer-shake,
   .animate-answer-error,
   .animate-flag-leave,
-  .animate-flag-promote {
+  .animate-flag-promote,
+  .animate-wrong-flag {
     animation: none;
   }
 }
