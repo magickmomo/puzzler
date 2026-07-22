@@ -8,8 +8,23 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: readonly ChangelogEntry[] = [
   {
+    date: "July 22, 2026",
+    title: "A personal Flag Report",
+    summary: "Puzzler now keeps a private record of the flags that need another look, while Flag Match Unlimited has become a truly untimed live-board challenge.",
+    highlights: [
+      "Flag Report ranks missed flags by accuracy and can be filtered by game mode.",
+      "The report adapts from a compact mobile grid to a wider desktop layout.",
+      "Unlimited is now named Classic Unlimited, and every Flag Blitz run can be paused safely.",
+      "Flag Blitz now keeps its records, report, and flag settings together, leaving the Hub ready for future games.",
+      "The Hub now previews Match Capital Cities as the next game on deck.",
+      "England, Scotland, and Wales are now available as individual flags, alongside the United Kingdom.",
+      "Speed Match now records the fastest full-board completion time, rather than a score.",
+    ],
+    commit: "b916333",
+  },
+  {
     date: "July 21, 2026",
-    title: "Speed Match Unlimited",
+    title: "Flag Match Unlimited",
     summary: "A continuous 60-second Flag Blitz challenge with a live flag board.",
     highlights: [
       "Nine active flags and three upcoming flag previews.",
