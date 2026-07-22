@@ -6,11 +6,13 @@ import {
   createQuestionDeck,
   createSpeedMatchTargetDeck,
   createSpeedMatchUnlimitedColumns,
+  getTimeLeft,
   getNextRoundAction,
   getUpdatedScore,
   isCorrectAnswer,
   normalizeAnswer,
   pickSpeedMatchTarget,
+  SPEED_MATCH_TIME_BONUS_MS,
 } from "./flag-quiz";
 
 describe("answer normalization", () => {
@@ -98,5 +100,15 @@ describe("round progression", () => {
 
   it("ends Classic after its tenth question", () => {
     expect(getNextRoundAction({ gameMode: "classic", correct: true, deckIndex: QUESTIONS_PER_GAME - 1, deckSize: QUESTIONS_PER_GAME })).toBe("results");
+  });
+});
+
+describe("Speed Match Unlimited timer", () => {
+  it("adds a visible two seconds to a low-time reward", () => {
+    const now = 10_000;
+    const deadlineAtNineSeconds = now + 8_100;
+
+    expect(getTimeLeft(deadlineAtNineSeconds, now)).toBe(9);
+    expect(getTimeLeft(deadlineAtNineSeconds + SPEED_MATCH_TIME_BONUS_MS, now)).toBe(11);
   });
 });

@@ -19,7 +19,7 @@ export function DifficultySelector({
   onSelect: (difficulty: Difficulty) => void;
   onBack: () => void;
 }) {
-  const modeLabel = gameMode === "classic" ? "Classic · 10 flags" : "Unlimited · one life";
+  const modeLabel = gameMode === "classic" ? "Classic · 10 flags" : "Classic Unlimited · one life";
   const badge = gameMode === "classic" ? "10 flags" : "unlimited";
 
   return (

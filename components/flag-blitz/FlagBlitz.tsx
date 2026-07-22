@@ -10,8 +10,10 @@ import {
   getUpdatedScore,
   isCorrectAnswer,
   pickSpeedMatchTarget,
+  getTimeLeft,
   SPEED_MATCH_UNLIMITED_QUEUED_FLAGS,
   SPEED_MATCH_UNLIMITED_VISIBLE_FLAGS,
+  SPEED_MATCH_TIME_BONUS_MS,
   type Difficulty,
   type GameMode,
 } from "@/lib/flag-quiz";
@@ -31,6 +33,7 @@ function isSpeedMatchMode(gameMode: GameMode | null): gameMode is "speed-match" 
 export function FlagBlitz({ onBack }: { onBack: () => void }) {
   const recordPlay = usePuzzlerStore((state) => state.recordPlay);
   const recordResult = usePuzzlerStore((state) => state.recordResult);
+  const recordFlagAttempt = usePuzzlerStore((state) => state.recordFlagAttempt);
   const [gameMode, setGameMode] = useState<GameMode | null>(null);
   const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
   const [questions, setQuestions] = useState<ReturnType<typeof createQuestionDeck>>([]);
@@ -134,10 +137,11 @@ export function FlagBlitz({ onBack }: { onBack: () => void }) {
   }
 
   function submitAnswer(value: string) {
-    if (roundState !== "playing" || !questions[index]) return;
+    if (roundState !== "playing" || !gameMode || !questions[index]) return;
 
     const correct = isCorrectAnswer(value, questions[index]);
     const updatedScore = getUpdatedScore({ score, streak }, correct);
+    recordFlagAttempt(gameMode, questions[index].code, correct);
     setAnswer(value);
     setWasCorrect(correct);
     setScore(updatedScore.score);
@@ -159,6 +163,8 @@ export function FlagBlitz({ onBack }: { onBack: () => void }) {
       ? speedMatchColumns.flat().find((country) => country.code === countryCode)
       : questions.find((country) => country.code === countryCode);
     if (!isSpeedMatchMode(gameMode) || roundState !== "playing" || !target || removingCode) return;
+
+    recordFlagAttempt(gameMode, target.code, countryCode === target.code);
 
     if (countryCode !== target.code) {
       const gameId = gameIdRef.current;
@@ -194,8 +200,8 @@ export function FlagBlitz({ onBack }: { onBack: () => void }) {
 
     if (gameMode === "speed-match-unlimited") {
       if (timerDeadlineRef.current !== null) {
-        timerDeadlineRef.current += 2_000;
-        setTimeLeft((current) => current + 2);
+        timerDeadlineRef.current += SPEED_MATCH_TIME_BONUS_MS;
+        setTimeLeft(getTimeLeft(timerDeadlineRef.current));
       }
 
       const columnIndex = speedMatchColumns.findIndex((column) => column.some((country) => country.code === countryCode));
@@ -303,7 +309,7 @@ export function FlagBlitz({ onBack }: { onBack: () => void }) {
 
     function syncTimer() {
       if (timerDeadlineRef.current === null) return;
-      const nextTimeLeft = Math.max(0, Math.ceil((timerDeadlineRef.current - Date.now()) / 1_000));
+      const nextTimeLeft = getTimeLeft(timerDeadlineRef.current);
       setTimeLeft((current) => current === nextTimeLeft ? current : nextTimeLeft);
     }
 

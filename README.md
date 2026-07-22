@@ -1,6 +1,6 @@
 # Puzzler
 
-Puzzler is a mobile-first arcade of quick games. The current live game is Flag Blitz: identify country flags in a 10-question Classic run, an Unlimited streak run, a 60-second Speed Match board, or Speed Match Unlimited—a continuously replenished board with nine active flags and three faded previews for 60 seconds.
+Puzzler is a mobile-first arcade of quick games. The current live game is Flag Blitz: identify country flags in a 10-question Classic run, a Classic Unlimited streak run, a 60-second Speed Match board, or Speed Match Unlimited—a continuously replenished board with nine active flags and three faded previews for 60 seconds.
 
 ## Stack
 
@@ -45,4 +45,4 @@ NEXT_PUBLIC_PUZZLER_MODE=dev
 
 ## Player records
 
-Completed runs are stored in the browser using Zustand persistence. The dashboard shows total runs, best Classic score, best Unlimited streak, and best Speed Match score. Records remain local to the browser and are not synced between devices.
+Completed runs and the Flag Report are stored in the browser using Zustand persistence. The dashboard shows total runs, best Classic score, best Classic Unlimited streak, and best Speed Match score; Flag Report records attempts, correct answers, and misses for each country in every Flag Blitz mode. Records remain local to the browser and are not synced between devices.

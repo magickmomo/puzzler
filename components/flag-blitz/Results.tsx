@@ -44,7 +44,7 @@ export function Results({
           : isSpeedMatch
           ? `You found ${score} of ${total} flags before the timer ended.`
           : isUnlimited
-          ? `Your run ended on flag ${questionNumber}. One miss ends the streak.`
+          ? `Your Classic Unlimited run ended on flag ${questionNumber}. One miss ends the streak.`
           : <>You completed <span className="capitalize">{difficulty}</span> mode. Another run could put you on top.</>}
       </p>
       <div className="mx-auto mt-8 grid w-full max-w-sm grid-cols-2 gap-3">

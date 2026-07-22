@@ -2,6 +2,7 @@
 
 import { FlagBlitz } from "@/components/flag-blitz/FlagBlitz";
 import { Changelog } from "@/components/Changelog";
+import { FlagReport } from "@/components/FlagReport";
 import { usePuzzlerStore } from "@/lib/puzzler-store";
 
 type GameCardConfig = {
@@ -133,7 +134,7 @@ function PlayerStats() {
   );
 }
 
-function Hub({ onLaunchFlagBlitz, onOpenChangelog }: { onLaunchFlagBlitz: () => void; onOpenChangelog: () => void }) {
+function Hub({ onLaunchFlagBlitz, onOpenChangelog, onOpenFlagReport }: { onLaunchFlagBlitz: () => void; onOpenChangelog: () => void; onOpenFlagReport: () => void }) {
   const visibleGames = SHOW_DEV_GAMES ? GAME_CARDS : GAME_CARDS.filter((game) => game.available);
 
   return (
@@ -152,6 +153,13 @@ function Hub({ onLaunchFlagBlitz, onOpenChangelog }: { onLaunchFlagBlitz: () => 
         </div>
       </section>
       <PlayerStats />
+      <button type="button" onClick={onOpenFlagReport} className="group mt-5 flex min-h-14 w-full items-center justify-between rounded-2xl border border-rose-400/25 bg-rose-400/5 px-5 text-left transition hover:border-rose-300/60 hover:bg-rose-400/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-300">
+        <span>
+          <span className="block text-sm font-black text-white">Flag Report</span>
+          <span className="mt-1 block text-xs font-semibold text-slate-500">See the flags that need another look.</span>
+        </span>
+        <span className="text-xl text-rose-300 transition-transform group-hover:translate-x-1" aria-hidden="true">→</span>
+      </button>
       <button type="button" onClick={onOpenChangelog} className="group mt-5 flex min-h-14 w-full items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/60 px-5 text-left transition hover:border-cyan-300/40 hover:bg-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
         <span>
           <span className="block text-sm font-black text-white">What&apos;s new</span>
@@ -172,9 +180,10 @@ export default function PuzzlerApp() {
     <div className="min-h-[100dvh] overflow-x-hidden bg-slate-950 text-slate-50 antialiased">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top,rgba(8,145,178,0.12),transparent_34rem)]" />
       <div className="relative">
-        {screen === "hub" && <Hub onLaunchFlagBlitz={() => navigate("flag-blitz")} onOpenChangelog={() => navigate("changelog")} />}
+        {screen === "hub" && <Hub onLaunchFlagBlitz={() => navigate("flag-blitz")} onOpenChangelog={() => navigate("changelog")} onOpenFlagReport={() => navigate("flag-report")} />}
         {screen === "flag-blitz" && <FlagBlitz onBack={() => navigate("hub")} />}
         {screen === "changelog" && <Changelog onBack={() => navigate("hub")} />}
+        {screen === "flag-report" && <FlagReport onBack={() => navigate("hub")} />}
       </div>
     </div>
   );

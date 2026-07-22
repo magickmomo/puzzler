@@ -13,6 +13,11 @@ export const QUESTIONS_PER_GAME = 10;
 export const SPEED_MATCH_UNLIMITED_VISIBLE_FLAGS = 9;
 export const SPEED_MATCH_UNLIMITED_COLUMN_COUNT = 3;
 export const SPEED_MATCH_UNLIMITED_QUEUED_FLAGS = SPEED_MATCH_UNLIMITED_COLUMN_COUNT;
+export const SPEED_MATCH_TIME_BONUS_MS = 2_000;
+
+export function getTimeLeft(deadline: number, now = Date.now()): number {
+  return Math.max(0, Math.ceil((deadline - now) / 1_000));
+}
 
 export function shuffle<T>(items: readonly T[]): T[] {
   return [...items]
