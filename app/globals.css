@@ -12,6 +12,7 @@
 
 html {
   background: #020617;
+  overflow-x: clip;
 }
 
 body {
@@ -19,6 +20,7 @@ body {
   background: #020617;
   color: #f8fafc;
   font-family: Arial, Helvetica, sans-serif;
+  overflow-x: clip;
 }
 
 button,
@@ -28,6 +30,12 @@ input {
 
 ::selection {
   background: rgba(34, 211, 238, 0.3);
+}
+
+@media (hover: hover) {
+  .record-card:hover .record-tooltip {
+    opacity: 1;
+  }
 }
 
 @keyframes answer-success {

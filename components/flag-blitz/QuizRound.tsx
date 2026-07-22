@@ -18,6 +18,7 @@ export function QuizRound({
   gameMode,
   difficulty,
   questions,
+  countryPool,
   index,
   questionNumber,
   answer,
@@ -32,6 +33,7 @@ export function QuizRound({
   gameMode: GameMode;
   difficulty: Difficulty;
   questions: Country[];
+  countryPool: Country[];
   index: number;
   questionNumber: number;
   answer: string;
@@ -44,7 +46,7 @@ export function QuizRound({
   onNext: () => void;
 }) {
   const question = questions[index];
-  const options = useMemo(() => createMultipleChoiceOptions(question), [question]);
+  const options = useMemo(() => createMultipleChoiceOptions(question, countryPool), [countryPool, question]);
   const action = getNextRoundAction({
     gameMode,
     correct: wasCorrect ?? false,

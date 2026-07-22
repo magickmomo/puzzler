@@ -3,16 +3,18 @@ import { COUNTRIES } from "@/app/data/countries";
 import {
   QUESTIONS_PER_GAME,
   SPEED_MATCH_UNLIMITED_VISIBLE_FLAGS,
+  createMultipleChoiceOptions,
   createQuestionDeck,
   createSpeedMatchTargetDeck,
   createSpeedMatchUnlimitedColumns,
+  getRemainingDuration,
   getTimeLeft,
   getNextRoundAction,
   getUpdatedScore,
   isCorrectAnswer,
   normalizeAnswer,
   pickSpeedMatchTarget,
-  SPEED_MATCH_TIME_BONUS_MS,
+  restoreDeadline,
 } from "./flag-quiz";
 
 describe("answer normalization", () => {
@@ -34,6 +36,11 @@ describe("answer normalization", () => {
     expect(isCorrectAnswer("Turkey", turkey!)).toBe(true);
     expect(isCorrectAnswer("Greece", turkey!)).toBe(false);
   });
+
+  it("includes the selected UK home nations alongside the United Kingdom", () => {
+    expect(COUNTRIES.filter((country) => ["gb", "gb-eng", "gb-sct", "gb-wls"].includes(country.code)).map((country) => country.name))
+      .toEqual(["England", "Scotland", "United Kingdom", "Wales"]);
+  });
 });
 
 describe("quiz decks", () => {
@@ -42,6 +49,17 @@ describe("quiz decks", () => {
 
     expect(deck).toHaveLength(QUESTIONS_PER_GAME);
     expect(new Set(deck.map((country) => country.code)).size).toBe(QUESTIONS_PER_GAME);
+  });
+
+  it("uses only the supplied country pool for decks and Easy-mode options", () => {
+    const countryPool = COUNTRIES.slice(0, 12);
+    const deck = createQuestionDeck("classic", countryPool);
+    const options = createMultipleChoiceOptions(countryPool[0], countryPool);
+
+    expect(deck).toHaveLength(QUESTIONS_PER_GAME);
+    expect(deck.every((country) => countryPool.some((candidate) => candidate.code === country.code))).toBe(true);
+    expect(options).toHaveLength(4);
+    expect(options.every((country) => countryPool.some((candidate) => candidate.code === country.code))).toBe(true);
   });
 
   it("creates a unique full-country Unlimited deck", () => {
@@ -67,7 +85,7 @@ describe("quiz decks", () => {
     expect(targets.map((country) => country.code)).not.toEqual(board.map((country) => country.code));
   });
 
-  it("creates a full source deck and a visible target for Speed Match Unlimited", () => {
+  it("creates a full source deck and a visible target for Flag Match Unlimited", () => {
     const deck = createQuestionDeck("speed-match-unlimited");
     const visibleFlags = deck.slice(0, SPEED_MATCH_UNLIMITED_VISIBLE_FLAGS);
     const target = pickSpeedMatchTarget(visibleFlags);
@@ -103,12 +121,15 @@ describe("round progression", () => {
   });
 });
 
-describe("Speed Match Unlimited timer", () => {
-  it("adds a visible two seconds to a low-time reward", () => {
-    const now = 10_000;
-    const deadlineAtNineSeconds = now + 8_100;
+describe("Speed Match timer", () => {
+  it("preserves a paused duration when restoring the deadline", () => {
+    const initialNow = 10_000;
+    const deadline = initialNow + 8_100;
+    const remainingDuration = getRemainingDuration(deadline, initialNow);
+    const resumedDeadline = restoreDeadline(remainingDuration, 30_000);
 
-    expect(getTimeLeft(deadlineAtNineSeconds, now)).toBe(9);
-    expect(getTimeLeft(deadlineAtNineSeconds + SPEED_MATCH_TIME_BONUS_MS, now)).toBe(11);
+    expect(getTimeLeft(deadline, initialNow)).toBe(9);
+    expect(remainingDuration).toBe(8_100);
+    expect(getTimeLeft(resumedDeadline, 30_000)).toBe(9);
   });
 });
