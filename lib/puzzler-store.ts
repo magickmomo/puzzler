@@ -15,13 +15,14 @@ import {
   type PuzzlerSettings,
 } from "./puzzler-settings";
 
-export type GameId = "flag-blitz";
+export type GameId = "flag-blitz" | "capital-cities";
 export type FlagBlitzView = "play" | "report" | "settings";
 
 type AppRoute =
   | { screen: "hub" }
   | { screen: "changelog" }
-  | { screen: "game"; gameId: GameId; view: FlagBlitzView };
+  | { screen: "game"; gameId: "flag-blitz"; view: FlagBlitzView }
+  | { screen: "game"; gameId: "capital-cities" };
 
 export type FlagBlitzProfile = BestScores & {
   totalPlays: number;
@@ -29,18 +30,27 @@ export type FlagBlitzProfile = BestScores & {
   settings: PuzzlerSettings;
 };
 
+export type CapitalCitiesProfile = {
+  totalPlays: number;
+  bestTimeMs: number | null;
+};
+
 type PuzzlerStore = {
   route: AppRoute;
   flagBlitz: FlagBlitzProfile;
+  capitalCities: CapitalCitiesProfile;
   goHome: () => void;
   openChangelog: () => void;
   openFlagBlitz: (view?: FlagBlitzView) => void;
+  openCapitalCities: () => void;
   recordFlagBlitzPlay: () => void;
   recordFlagBlitzResult: (gameMode: GameMode, score: number, speedMatchCompletionTimeMs?: number) => void;
   recordFlagBlitzAttempt: (gameMode: GameMode, countryCode: string, correct: boolean) => void;
   setFlagBlitzCountryExcluded: (countryCode: string, excluded: boolean) => void;
   includeAllFlagBlitzCountries: () => void;
   resetFlagBlitzSettings: () => void;
+  recordCapitalCitiesPlay: () => void;
+  recordCapitalCitiesResult: (timeMs: number) => void;
 };
 
 type LegacyPlayerRecords = Partial<FlagBlitzProfile> & {
@@ -59,22 +69,42 @@ export function createDefaultFlagBlitzProfile(): FlagBlitzProfile {
   };
 }
 
+export function createDefaultCapitalCitiesProfile(): CapitalCitiesProfile {
+  return {
+    totalPlays: 0,
+    bestTimeMs: null,
+  };
+}
+
 type VersionTwoFlagBlitzProfile = Partial<FlagBlitzProfile> & {
   bestSpeedMatchScore?: number;
 };
 
-export function migratePlayerRecords(persistedState: unknown, version: number): { flagBlitz: FlagBlitzProfile } {
-  const defaults = createDefaultFlagBlitzProfile();
+export function migratePlayerRecords(persistedState: unknown, version: number): {
+  flagBlitz: FlagBlitzProfile;
+  capitalCities: CapitalCitiesProfile;
+} {
+  const flagBlitzDefaults = createDefaultFlagBlitzProfile();
+  const capitalCitiesDefaults = createDefaultCapitalCitiesProfile();
 
   if (version >= 2) {
-    const persistedFlagBlitz = (persistedState as { flagBlitz?: VersionTwoFlagBlitzProfile }).flagBlitz ?? {};
+    const persisted = persistedState as {
+      flagBlitz?: VersionTwoFlagBlitzProfile;
+      capitalCities?: Partial<CapitalCitiesProfile>;
+    };
+    const persistedFlagBlitz = persisted.flagBlitz ?? {};
     const { bestSpeedMatchScore: _retiredSpeedScore, ...flagBlitz } = persistedFlagBlitz;
 
     return {
       flagBlitz: {
-        ...defaults,
+        ...flagBlitzDefaults,
         ...flagBlitz,
-        bestSpeedMatchTimeMs: flagBlitz.bestSpeedMatchTimeMs ?? defaults.bestSpeedMatchTimeMs,
+        bestSpeedMatchTimeMs: flagBlitz.bestSpeedMatchTimeMs ?? flagBlitzDefaults.bestSpeedMatchTimeMs,
+      },
+      capitalCities: {
+        ...capitalCitiesDefaults,
+        ...persisted.capitalCities,
+        bestTimeMs: persisted.capitalCities?.bestTimeMs ?? capitalCitiesDefaults.bestTimeMs,
       },
     };
   }
@@ -83,14 +113,15 @@ export function migratePlayerRecords(persistedState: unknown, version: number): 
 
   return {
     flagBlitz: {
-      ...defaults,
-      totalPlays: legacy.totalPlays ?? defaults.totalPlays,
-      bestClassicScore: legacy.bestClassicScore ?? defaults.bestClassicScore,
-      bestUnlimitedStreak: legacy.bestUnlimitedStreak ?? defaults.bestUnlimitedStreak,
-      bestSpeedMatchUnlimitedScore: legacy.bestSpeedMatchUnlimitedScore ?? defaults.bestSpeedMatchUnlimitedScore,
-      flagStatsByMode: legacy.flagStatsByMode ?? defaults.flagStatsByMode,
-      settings: legacy.settings ?? defaults.settings,
+      ...flagBlitzDefaults,
+      totalPlays: legacy.totalPlays ?? flagBlitzDefaults.totalPlays,
+      bestClassicScore: legacy.bestClassicScore ?? flagBlitzDefaults.bestClassicScore,
+      bestUnlimitedStreak: legacy.bestUnlimitedStreak ?? flagBlitzDefaults.bestUnlimitedStreak,
+      bestSpeedMatchUnlimitedScore: legacy.bestSpeedMatchUnlimitedScore ?? flagBlitzDefaults.bestSpeedMatchUnlimitedScore,
+      flagStatsByMode: legacy.flagStatsByMode ?? flagBlitzDefaults.flagStatsByMode,
+      settings: legacy.settings ?? flagBlitzDefaults.settings,
     },
+    capitalCities: capitalCitiesDefaults,
   };
 }
 
@@ -99,9 +130,11 @@ export const usePuzzlerStore = create<PuzzlerStore>()(
     (set) => ({
       route: { screen: "hub" },
       flagBlitz: createDefaultFlagBlitzProfile(),
+      capitalCities: createDefaultCapitalCitiesProfile(),
       goHome: () => set({ route: { screen: "hub" } }),
       openChangelog: () => set({ route: { screen: "changelog" } }),
       openFlagBlitz: (view = "play") => set({ route: { screen: "game", gameId: "flag-blitz", view } }),
+      openCapitalCities: () => set({ route: { screen: "game", gameId: "capital-cities" } }),
       recordFlagBlitzPlay: () => set((state) => ({
         flagBlitz: { ...state.flagBlitz, totalPlays: state.flagBlitz.totalPlays + 1 },
       })),
@@ -131,12 +164,23 @@ export const usePuzzlerStore = create<PuzzlerStore>()(
       resetFlagBlitzSettings: () => set((state) => ({
         flagBlitz: { ...state.flagBlitz, settings: createDefaultSettings() },
       })),
+      recordCapitalCitiesPlay: () => set((state) => ({
+        capitalCities: { ...state.capitalCities, totalPlays: state.capitalCities.totalPlays + 1 },
+      })),
+      recordCapitalCitiesResult: (timeMs) => set((state) => ({
+        capitalCities: {
+          ...state.capitalCities,
+          bestTimeMs: state.capitalCities.bestTimeMs === null
+            ? timeMs
+            : Math.min(state.capitalCities.bestTimeMs, timeMs),
+        },
+      })),
     }),
     {
       name: "puzzler-player-records",
-      version: 3,
+      version: 4,
       migrate: migratePlayerRecords,
-      partialize: (state) => ({ flagBlitz: state.flagBlitz }),
+      partialize: (state) => ({ flagBlitz: state.flagBlitz, capitalCities: state.capitalCities }),
     },
   ),
 );

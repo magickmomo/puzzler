@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { CapitalCities } from "@/components/capital-cities/CapitalCities";
 import { FlagBlitz } from "@/components/flag-blitz/FlagBlitz";
 import { Changelog } from "@/components/Changelog";
 import { FlagReport } from "@/components/FlagReport";
@@ -46,11 +47,11 @@ const GAME_CARDS: readonly GameCardConfig[] = [
   {
     id: "capital-cities",
     title: "Match Capital Cities",
-    eyebrow: "Coming soon",
+    eyebrow: "New game",
     description: "Match every country to its capital and build a world-class run.",
     accent: "from-violet-400 to-fuchsia-500",
     icon: <EiffelTowerIcon />,
-    available: false,
+    available: true,
   },
   {
     id: "number-drop",
@@ -124,8 +125,16 @@ function GameCard({ game, onLaunch }: { game: GameCardConfig; onLaunch: () => vo
   return <button type="button" onClick={onLaunch} className={`${commonClasses} w-full border-slate-700/80 bg-slate-900/80 hover:-translate-y-1 hover:border-cyan-300/40 hover:bg-slate-900`}>{content}</button>;
 }
 
-function Hub({ onLaunchFlagBlitz, onOpenChangelog }: { onLaunchFlagBlitz: () => void; onOpenChangelog: () => void }) {
-  const visibleGames = SHOW_DEV_GAMES ? GAME_CARDS : GAME_CARDS.filter((game) => game.available || game.id === "capital-cities");
+function Hub({
+  onLaunchFlagBlitz,
+  onLaunchCapitalCities,
+  onOpenChangelog,
+}: {
+  onLaunchFlagBlitz: () => void;
+  onLaunchCapitalCities: () => void;
+  onOpenChangelog: () => void;
+}) {
+  const visibleGames = SHOW_DEV_GAMES ? GAME_CARDS : GAME_CARDS.filter((game) => game.available);
 
   return (
     <main className="mx-auto min-h-[100dvh] w-full max-w-5xl px-5 pb-10 pt-[max(1.25rem,env(safe-area-inset-top))] sm:px-8">
@@ -136,10 +145,19 @@ function Hub({ onLaunchFlagBlitz, onOpenChangelog }: { onLaunchFlagBlitz: () => 
             <p className="text-sm font-semibold text-slate-500">Quick games. Sharp minds.</p>
             <h2 id="games-heading" className="mt-1 text-3xl font-black tracking-tight text-white">Choose your challenge</h2>
           </div>
-          <span className="hidden rounded-full border border-slate-800 px-3 py-2 text-xs font-bold text-slate-500 sm:block">{SHOW_DEV_GAMES ? "Dev catalog" : "1 live · 1 soon"}</span>
+          <span className="hidden rounded-full border border-slate-800 px-3 py-2 text-xs font-bold text-slate-500 sm:block">{SHOW_DEV_GAMES ? "Dev catalog" : "2 games live"}</span>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {visibleGames.map((game) => <GameCard key={game.id} game={game} onLaunch={onLaunchFlagBlitz} />)}
+          {visibleGames.map((game) => (
+            <GameCard
+              key={game.id}
+              game={game}
+              onLaunch={() => {
+                if (game.id === "flag-blitz") onLaunchFlagBlitz();
+                if (game.id === "capital-cities") onLaunchCapitalCities();
+              }}
+            />
+          ))}
         </div>
       </section>
       <footer className="mt-10 border-t border-slate-900 pt-5 text-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-700">New games loading</footer>
@@ -152,18 +170,20 @@ export default function PuzzlerApp() {
   const goHome = usePuzzlerStore((state) => state.goHome);
   const openChangelog = usePuzzlerStore((state) => state.openChangelog);
   const openFlagBlitz = usePuzzlerStore((state) => state.openFlagBlitz);
+  const openCapitalCities = usePuzzlerStore((state) => state.openCapitalCities);
 
   return (
     <div className="min-h-[100dvh] bg-slate-950 text-slate-50 antialiased">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top,rgba(8,145,178,0.12),transparent_34rem)]" />
       <div className="relative">
-        {route.screen === "hub" && <Hub onLaunchFlagBlitz={() => openFlagBlitz()} onOpenChangelog={openChangelog} />}
+        {route.screen === "hub" && <Hub onLaunchFlagBlitz={() => openFlagBlitz()} onLaunchCapitalCities={openCapitalCities} onOpenChangelog={openChangelog} />}
         {route.screen === "changelog" && <Changelog onBack={goHome} />}
         {route.screen === "game" && route.gameId === "flag-blitz" && route.view === "play" && (
           <FlagBlitz onBack={goHome} onOpenReport={() => openFlagBlitz("report")} onOpenSettings={() => openFlagBlitz("settings")} />
         )}
         {route.screen === "game" && route.gameId === "flag-blitz" && route.view === "report" && <FlagReport onBack={() => openFlagBlitz("play")} />}
         {route.screen === "game" && route.gameId === "flag-blitz" && route.view === "settings" && <Settings onBack={() => openFlagBlitz("play")} />}
+        {route.screen === "game" && route.gameId === "capital-cities" && <CapitalCities onBack={goHome} />}
       </div>
     </div>
   );

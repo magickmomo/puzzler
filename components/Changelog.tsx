@@ -23,12 +23,16 @@ export function Changelog({ onBack }: { onBack: () => void }) {
       </section>
       <ol className="space-y-4" aria-label="Puzzler changelog">
         {CHANGELOG_ENTRIES.map((entry) => (
-          <li key={entry.commit} className="rounded-3xl border border-slate-800 bg-slate-900/70 p-5">
+          <li key={entry.commit ?? entry.title} className="rounded-3xl border border-slate-800 bg-slate-900/70 p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">{entry.date}</p>
-              <a href={`${REPOSITORY_URL}/commit/${entry.commit}`} target="_blank" rel="noreferrer" className="rounded-full border border-slate-700 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 transition hover:border-cyan-300/60 hover:text-cyan-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
-                GitHub change ↗
-              </a>
+              {entry.commit ? (
+                <a href={`${REPOSITORY_URL}/commit/${entry.commit}`} target="_blank" rel="noreferrer" className="rounded-full border border-slate-700 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 transition hover:border-cyan-300/60 hover:text-cyan-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+                  GitHub change ↗
+                </a>
+              ) : (
+                <span className="rounded-full border border-violet-300/30 bg-violet-300/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-violet-200">New in this build</span>
+              )}
             </div>
             <h2 className="mt-4 text-xl font-black text-white">{entry.title}</h2>
             <p className="mt-2 leading-6 text-slate-400">{entry.summary}</p>
