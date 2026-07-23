@@ -13,7 +13,7 @@ const FILTERS: ReadonlyArray<{ id: CountryFilter; label: string }> = [
   { id: "excluded", label: "Excluded" },
 ];
 
-export function Settings({ onBack }: { onBack: () => void }) {
+export function Settings({ onBack, onHub }: { onBack: () => void; onHub: () => void }) {
   const settings = usePuzzlerStore((state) => state.flagBlitz.settings);
   const setCountryExcluded = usePuzzlerStore((state) => state.setFlagBlitzCountryExcluded);
   const includeAllCountries = usePuzzlerStore((state) => state.includeAllFlagBlitzCountries);
@@ -39,7 +39,9 @@ export function Settings({ onBack }: { onBack: () => void }) {
           <span aria-hidden="true">←</span> Flag Blitz
         </button>
         <p className="text-base font-black tracking-tight text-white">Settings</p>
-        <span className="min-w-12" aria-hidden="true" />
+        <button type="button" onClick={onHub} className="flex min-h-12 items-center rounded-xl px-2 text-sm font-bold text-cyan-300 transition hover:text-cyan-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+          Back to Hub
+        </button>
       </header>
 
       <section className="py-8" aria-labelledby="settings-title">

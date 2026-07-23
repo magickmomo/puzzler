@@ -20,7 +20,7 @@ export function PauseOverlay({
           <button type="button" autoFocus onClick={onResume} className="min-h-14 w-full rounded-2xl bg-cyan-300 px-5 font-black text-slate-950 transition hover:bg-cyan-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-100 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-900">Resume</button>
           <button type="button" onClick={onRestart} className="min-h-14 w-full rounded-2xl border border-slate-700 bg-slate-800 px-5 font-black text-white transition hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300">Restart run</button>
           <button type="button" onClick={onEndRun} className="min-h-14 w-full rounded-2xl border border-amber-300/40 bg-amber-300/10 px-5 font-black text-amber-200 transition hover:bg-amber-300/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-200">Save &amp; see results</button>
-          <button type="button" onClick={onHub} className="min-h-14 w-full rounded-2xl px-5 font-black text-slate-400 transition hover:bg-slate-800 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300">Exit to Hub — abandon run</button>
+          <button type="button" onClick={onHub} className="min-h-14 w-full rounded-2xl px-5 font-black text-slate-400 transition hover:bg-slate-800 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300">Back to Hub</button>
         </div>
       </section>
     </div>

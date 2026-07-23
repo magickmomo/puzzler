@@ -3,9 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { Country } from "@/app/data/countries";
 import {
+  FLAG_MATCH_TIMED_CORRECT_BONUS_MS,
   createQuestionDeck,
   createSpeedMatchTargetDeck,
   createSpeedMatchUnlimitedColumns,
+  extendDeadline,
   getRemainingDuration,
   getNextRoundAction,
   getUpdatedScore,
@@ -77,11 +79,13 @@ export function FlagBlitz({
   const [incorrectCodes, setIncorrectCodes] = useState<string[]>([]);
   const [wrongFlagName, setWrongFlagName] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(60);
+  const [timerBonusSeconds, setTimerBonusSeconds] = useState<number | null>(null);
   const [speedMatchCompletionTimeMs, setSpeedMatchCompletionTimeMs] = useState<number | null>(null);
   const [speedMatchUnlimitedTimed, setSpeedMatchUnlimitedTimed] = useState(false);
   const transitionTimerRef = useRef<number | null>(null);
   const promotionTimerRef = useRef<number | null>(null);
   const wrongFlagTimerRef = useRef<number | null>(null);
+  const timerBonusTimerRef = useRef<number | null>(null);
   const timerDeadlineRef = useRef<number | null>(null);
   const pausedRemainingDurationRef = useRef<number | null>(null);
   const gameIdRef = useRef(0);
@@ -101,6 +105,15 @@ export function FlagBlitz({
       window.clearTimeout(wrongFlagTimerRef.current);
       wrongFlagTimerRef.current = null;
     }
+  }
+
+  function showTimerBonus(seconds: number) {
+    if (timerBonusTimerRef.current !== null) window.clearTimeout(timerBonusTimerRef.current);
+    setTimerBonusSeconds(seconds);
+    timerBonusTimerRef.current = window.setTimeout(() => {
+      setTimerBonusSeconds(null);
+      timerBonusTimerRef.current = null;
+    }, 1_000);
   }
 
   useEffect(() => () => clearBoardTransition(), []);
@@ -170,6 +183,7 @@ export function FlagBlitz({
     setIncorrectCodes([]);
     setWrongFlagName(null);
     setTimeLeft(SPEED_MATCH_TIME_LIMIT_MS / 1_000);
+    setTimerBonusSeconds(null);
     setSpeedMatchCompletionTimeMs(null);
     recordPlay();
   }
@@ -277,6 +291,12 @@ export function FlagBlitz({
     setWrongFlagName(null);
     setScore(nextScore);
     setStreak((current) => current + 1);
+
+    if (gameMode === "speed-match-unlimited" && speedMatchUnlimitedTimed && timerDeadlineRef.current !== null) {
+      timerDeadlineRef.current = extendDeadline(timerDeadlineRef.current, FLAG_MATCH_TIMED_CORRECT_BONUS_MS);
+      setTimeLeft(getTimeLeft(timerDeadlineRef.current));
+      showTimerBonus(FLAG_MATCH_TIMED_CORRECT_BONUS_MS / 1_000);
+    }
 
     if (gameMode === "speed-match-unlimited") {
       const columnIndex = speedMatchColumns.findIndex((column) => column.some((country) => country.code === countryCode));
@@ -406,24 +426,32 @@ export function FlagBlitz({
   const activeSpeedMatchFlags = gameMode === "speed-match-unlimited" ? speedMatchColumns.flat() : questions;
   const activeSpeedMatchTarget = gameMode === "speed-match-unlimited" ? speedMatchTarget : speedMatchTargets[index];
   const timedSpeedMatchActive = isTimedSpeedMatchRun(gameMode, speedMatchUnlimitedTimed);
+  const pauseInTimerRow = gameMode === "speed-match" && timedSpeedMatchActive;
   const headerValue = speedMatchActive ? score : streak;
   const headerLabel = speedMatchActive ? `${score} flags found` : `${streak} answer streak`;
 
   return (
     <main className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-8">
-      <header className="flex min-h-14 items-center justify-between gap-3">
+      <header className="flex min-h-14 items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 px-2">
         {roundState === "playing" ? (
-          <button type="button" onClick={pauseGame} disabled={removingCode !== null} aria-label="Pause game" className="flex min-h-12 items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm font-black text-cyan-300 transition hover:border-cyan-300 hover:text-cyan-100 disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
-            <span aria-hidden="true">Ⅱ</span> Pause
+          <button type="button" onClick={abandonGame} aria-label="Back to Hub" className="flex min-h-12 shrink-0 items-center gap-1 rounded-xl px-2 text-sm font-bold text-slate-400 transition hover:bg-slate-900 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+            <span aria-hidden="true">←</span> Back to Hub
           </button>
         ) : (
           <button type="button" onClick={abandonGame} className="flex min-h-12 items-center gap-2 rounded-xl px-2 text-sm font-bold text-slate-400 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
-            <span aria-hidden="true">←</span> Hub
+            <span aria-hidden="true">←</span> Back to Hub
           </button>
         )}
-        <p className="text-base font-black tracking-tight text-white">Flag Blitz</p>
-        <div className="flex min-h-12 min-w-20 items-center justify-end gap-1.5 text-base font-black text-amber-300" aria-label={headerLabel}>
-          <span aria-hidden="true">◆</span> {headerValue}
+        <p className="min-w-0 flex-1 text-center text-sm font-black tracking-tight text-white sm:text-base">Flag Blitz</p>
+        <div className="flex shrink-0 items-center gap-2">
+          <div className="flex min-h-12 min-w-12 items-center justify-center gap-1.5 rounded-xl border border-amber-300/15 bg-amber-300/5 px-2 text-sm font-black text-amber-300" aria-label={headerLabel}>
+            <span aria-hidden="true">◆</span> {headerValue}
+          </div>
+          {roundState === "playing" && !pauseInTimerRow && (
+            <button type="button" onClick={pauseGame} disabled={removingCode !== null} aria-label="Pause game" className="flex min-h-12 items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-950 px-3 text-sm font-black text-cyan-300 transition hover:border-cyan-300 hover:text-cyan-100 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+              <span aria-hidden="true">Ⅱ</span> Pause
+            </button>
+          )}
         </div>
       </header>
       {roundState === "selecting-mode" && (
@@ -443,8 +471,8 @@ export function FlagBlitz({
           <h1 id="timer-choice-title" className="mt-2 text-4xl font-black tracking-tight text-white">Choose your timer</h1>
           <p className="mx-auto mt-3 max-w-xs text-base leading-7 text-slate-400">Play relaxed with no clock, or race to find as many flags as you can in 60 seconds.</p>
           <div className="mx-auto mt-8 w-full max-w-sm space-y-3">
-            <button type="button" autoFocus onClick={() => beginGame("speed-match-unlimited", null, false)} className="min-h-16 w-full rounded-2xl bg-cyan-300 px-5 text-left font-black text-slate-950 transition hover:bg-cyan-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-100 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">No timer<span className="mt-1 block text-sm font-semibold text-slate-700">Play until you save the run.</span></button>
-            <button type="button" onClick={() => beginGame("speed-match-unlimited", null, true)} className="min-h-16 w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 text-left font-black text-white transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400">60-second timer<span className="mt-1 block text-sm font-semibold text-slate-500">Find as many as you can before time runs out.</span></button>
+            <button type="button" autoFocus onClick={() => beginGame("speed-match-unlimited", null, true)} className="group min-h-16 w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 text-left font-black text-white transition hover:border-cyan-300 hover:bg-cyan-300 hover:text-slate-950 focus:outline-none focus-visible:border-cyan-300 focus-visible:bg-cyan-300 focus-visible:text-slate-950 focus-visible:ring-2 focus-visible:ring-cyan-100 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">60-second timer<span className="mt-1 block text-sm font-semibold text-slate-500 transition group-hover:text-slate-700 group-focus-visible:text-slate-700">Every correct flag adds 3 seconds.</span></button>
+            <button type="button" onClick={() => beginGame("speed-match-unlimited", null, false)} className="group min-h-16 w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 text-left font-black text-white transition hover:border-cyan-300 hover:bg-cyan-300 hover:text-slate-950 focus:outline-none focus-visible:border-cyan-300 focus-visible:bg-cyan-300 focus-visible:text-slate-950 focus-visible:ring-2 focus-visible:ring-cyan-100 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">No timer<span className="mt-1 block text-sm font-semibold text-slate-500 transition group-hover:text-slate-700 group-focus-visible:text-slate-700">Play until you save the run.</span></button>
             <button type="button" onClick={() => setRoundState("selecting-mode")} className="min-h-12 w-full rounded-2xl px-5 font-black text-slate-400 transition hover:bg-slate-900 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300">Back to modes</button>
           </div>
         </section>
@@ -472,6 +500,9 @@ export function FlagBlitz({
           flags={activeSpeedMatchFlags}
           target={activeSpeedMatchTarget}
           timeLeft={timedSpeedMatchActive ? timeLeft : null}
+          timerBonusSeconds={timedSpeedMatchActive ? timerBonusSeconds : null}
+          onPause={pauseInTimerRow ? pauseGame : undefined}
+          pauseDisabled={removingCode !== null}
           score={score}
           total={gameMode === "speed-match" ? questions.length : null}
           matchedCodes={matchedCodes}

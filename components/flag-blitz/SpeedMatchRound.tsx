@@ -5,6 +5,9 @@ export function SpeedMatchRound({
   flags,
   target,
   timeLeft,
+  timerBonusSeconds,
+  onPause,
+  pauseDisabled,
   score,
   total,
   matchedCodes,
@@ -20,6 +23,9 @@ export function SpeedMatchRound({
   flags: Country[];
   target: Country;
   timeLeft: number | null;
+  timerBonusSeconds: number | null;
+  onPause?: () => void;
+  pauseDisabled: boolean;
   score: number;
   total: number | null;
   matchedCodes: string[];
@@ -32,6 +38,8 @@ export function SpeedMatchRound({
   wrongFlagName: string | null;
   onSelect: (country: Country) => void;
 }) {
+  const scoreSummary = isUnlimited ? `Score: ${score}` : `${score} / ${total ?? flags.length} Guessed`;
+
   function tileClassName(country: Country, isPromoted: boolean): string {
     const base = "relative aspect-[4/3] min-h-14 overflow-hidden border p-1.5 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300";
 
@@ -85,14 +93,24 @@ export function SpeedMatchRound({
   return (
     <section className="flex flex-1 flex-col py-4" aria-labelledby="speed-match-target">
       <div className="flex items-center justify-between gap-3 border-b border-slate-900 pb-4">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-rose-300">{isUnlimited ? "Flag Match Unlimited" : "Speed Match"}</p>
-          <p className="mt-1 text-sm font-semibold text-slate-500">{isUnlimited ? `${score} found · ${flags.length} live` : `${score} of ${total} found`}</p>
+        <div className="min-w-0">
+          <p className="text-sm font-black tracking-tight text-white">{isUnlimited ? "Flag Match Unlimited" : "Speed Match"}</p>
+          <p className="mt-1 text-sm font-bold text-slate-400">{scoreSummary}</p>
         </div>
         {timeLeft !== null && (
-          <time className={`grid min-h-14 min-w-20 place-items-center border px-3 text-2xl font-black tabular-nums ${timeLeft <= 10 ? "animate-pulse border-rose-400/70 bg-rose-400/10 text-rose-300" : "border-cyan-300/30 bg-cyan-300/10 text-cyan-300"}`} dateTime={`PT${timeLeft}S`} aria-label={`${timeLeft} seconds remaining`}>
-            {timeLeft}s
-          </time>
+          <div className="flex items-center gap-2">
+            {onPause && (
+              <button type="button" onClick={onPause} disabled={pauseDisabled} aria-label="Pause game" className="flex min-h-12 items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm font-black text-cyan-300 transition hover:border-cyan-300 hover:text-cyan-100 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+                <span aria-hidden="true">Ⅱ</span> Pause
+              </button>
+            )}
+            <div className="relative">
+              <time className={`grid min-h-12 min-w-[4.5rem] place-items-center rounded-xl border px-3 text-xl font-black tabular-nums ${timeLeft <= 10 ? "animate-pulse border-rose-400/70 bg-rose-400/10 text-rose-300" : "border-cyan-300/30 bg-cyan-300/10 text-cyan-300"}`} dateTime={`PT${timeLeft}S`} aria-label={`${timeLeft} seconds remaining`}>
+                {timeLeft}s
+              </time>
+              {timerBonusSeconds !== null && <span className="pointer-events-none absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-sm font-black text-emerald-300" aria-live="polite">+{timerBonusSeconds}s</span>}
+            </div>
+          </div>
         )}
       </div>
       <div className="py-5 text-center">

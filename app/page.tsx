@@ -181,8 +181,8 @@ export default function PuzzlerApp() {
         {route.screen === "game" && route.gameId === "flag-blitz" && route.view === "play" && (
           <FlagBlitz onBack={goHome} onOpenReport={() => openFlagBlitz("report")} onOpenSettings={() => openFlagBlitz("settings")} />
         )}
-        {route.screen === "game" && route.gameId === "flag-blitz" && route.view === "report" && <FlagReport onBack={() => openFlagBlitz("play")} />}
-        {route.screen === "game" && route.gameId === "flag-blitz" && route.view === "settings" && <Settings onBack={() => openFlagBlitz("play")} />}
+        {route.screen === "game" && route.gameId === "flag-blitz" && route.view === "report" && <FlagReport onBack={() => openFlagBlitz("play")} onHub={goHome} />}
+        {route.screen === "game" && route.gameId === "flag-blitz" && route.view === "settings" && <Settings onBack={() => openFlagBlitz("play")} onHub={goHome} />}
         {route.screen === "game" && route.gameId === "capital-cities" && <CapitalCities onBack={goHome} />}
       </div>
     </div>

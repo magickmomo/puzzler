@@ -150,7 +150,7 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
       <main className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col px-5 pb-10 pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-8">
         <header className="flex min-h-14 items-center justify-between gap-3">
           <button type="button" onClick={onBack} className="flex min-h-12 items-center gap-2 rounded-xl px-2 text-sm font-bold text-slate-400 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300">
-            <span aria-hidden="true">←</span> Hub
+            <span aria-hidden="true">←</span> Back to Hub
           </button>
           <p className="text-base font-black tracking-tight text-white">Match Capital Cities</p>
           <span className="min-w-12" aria-hidden="true" />
@@ -188,7 +188,7 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
     <main className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-8">
       <header className="flex min-h-14 items-center justify-between gap-3">
         <button type="button" onClick={onBack} className="flex min-h-12 items-center gap-2 rounded-xl px-2 text-sm font-bold text-slate-400 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300">
-          <span aria-hidden="true">←</span> Hub
+          <span aria-hidden="true">←</span> Back to Hub
         </button>
         <p className="text-center text-base font-black tracking-tight text-white">Match Capital Cities</p>
         <time className="min-w-20 text-right text-xl font-black tabular-nums text-violet-300" dateTime={`PT${Math.round(elapsedMs / 1_000)}S`} aria-label={`${formatSeconds(elapsedMs)} elapsed`}>{formatSeconds(elapsedMs)}</time>
