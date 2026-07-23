@@ -17,6 +17,7 @@ export const CHANGELOG_ENTRIES: readonly ChangelogEntry[] = [
       "Your fastest completion time is saved separately from Flag Blitz records.",
       "The capital collection includes the United Kingdom and all four home nations, including Belfast for Northern Ireland.",
     ],
+    commit: "75f5584",
   },
   {
     date: "July 22, 2026",
