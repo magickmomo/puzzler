@@ -49,4 +49,28 @@ describe("player-record migration", () => {
       },
     });
   });
+
+  it("adds an independent Capital Cities profile without changing Flag Blitz history", () => {
+    const migrated = migratePlayerRecords({
+      flagBlitz: {
+        totalPlays: 9,
+        bestClassicScore: 8,
+      },
+      capitalCities: {
+        totalPlays: 4,
+        bestTimeMs: 21_500,
+      },
+    }, 3);
+
+    expect(migrated).toMatchObject({
+      flagBlitz: {
+        totalPlays: 9,
+        bestClassicScore: 8,
+      },
+      capitalCities: {
+        totalPlays: 4,
+        bestTimeMs: 21_500,
+      },
+    });
+  });
 });

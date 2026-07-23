@@ -6,7 +6,7 @@ export type Country = {
 
 type CountryRecord = readonly [code: string, name: string, aliases?: readonly string[]];
 
-// 193 United Nations member states, plus the Holy See, the State of Palestine, and three UK home nations.
+// 193 United Nations member states, plus the Holy See, the State of Palestine, and four UK home nations.
 const COUNTRY_DATA: readonly CountryRecord[] = [
   ["af", "Afghanistan"], ["al", "Albania"], ["dz", "Algeria"], ["ad", "Andorra"], ["ao", "Angola"],
   ["ag", "Antigua and Barbuda"], ["ar", "Argentina"], ["am", "Armenia"], ["au", "Australia"], ["at", "Austria"],
@@ -33,7 +33,7 @@ const COUNTRY_DATA: readonly CountryRecord[] = [
   ["mu", "Mauritius"], ["mx", "Mexico"], ["fm", "Micronesia", ["Federated States of Micronesia"]], ["md", "Moldova", ["Republic of Moldova"]], ["mc", "Monaco"],
   ["mn", "Mongolia"], ["me", "Montenegro"], ["ma", "Morocco"], ["mz", "Mozambique"], ["mm", "Myanmar", ["Burma"]],
   ["na", "Namibia"], ["nr", "Nauru"], ["np", "Nepal"], ["nl", "Netherlands", ["Holland"]], ["nz", "New Zealand"],
-  ["ni", "Nicaragua"], ["ne", "Niger"], ["ng", "Nigeria"], ["mk", "North Macedonia", ["Macedonia"]], ["no", "Norway"],
+  ["ni", "Nicaragua"], ["ne", "Niger"], ["ng", "Nigeria"], ["mk", "North Macedonia", ["Macedonia"]], ["gb-nir", "Northern Ireland"], ["no", "Norway"],
   ["om", "Oman"], ["pk", "Pakistan"], ["pw", "Palau"], ["pa", "Panama"], ["pg", "Papua New Guinea"],
   ["py", "Paraguay"], ["pe", "Peru"], ["ph", "Philippines", ["The Philippines"]], ["pl", "Poland"], ["pt", "Portugal"],
   ["qa", "Qatar"], ["ro", "Romania"], ["ru", "Russia", ["Russian Federation"]], ["rw", "Rwanda"], ["kn", "Saint Kitts and Nevis"],

@@ -3,10 +3,21 @@ export type ChangelogEntry = {
   title: string;
   summary: string;
   highlights: readonly string[];
-  commit: string;
+  commit?: string;
 };
 
 export const CHANGELOG_ENTRIES: readonly ChangelogEntry[] = [
+  {
+    date: "July 23, 2026",
+    title: "Match Capital Cities arrives",
+    summary: "A new board-clearing game challenges you to connect ten countries with their capitals as quickly as you can.",
+    highlights: [
+      "Choose a country and its capital from two shuffled columns to make a pair.",
+      "Correct pairs flash green and clear away; every wrong pair adds 2 seconds.",
+      "Your fastest completion time is saved separately from Flag Blitz records.",
+      "The capital collection includes the United Kingdom and all four home nations, including Belfast for Northern Ireland.",
+    ],
+  },
   {
     date: "July 22, 2026",
     title: "A personal Flag Report",
@@ -15,7 +26,7 @@ export const CHANGELOG_ENTRIES: readonly ChangelogEntry[] = [
       "Flag Report ranks missed flags by accuracy and can be filtered by game mode.",
       "The report adapts from a compact mobile grid to a wider desktop layout.",
       "Unlimited is now named Classic Unlimited, and every Flag Blitz run can be paused safely.",
-      "Flag Blitz now keeps its records, report, and flag settings together, leaving the Hub ready for future games.",
+      "Choose which flags appear in future Flag Blitz runs; keep at least 12 active for live boards.",
       "The Hub now previews Match Capital Cities as the next game on deck.",
       "England, Scotland, and Wales are now available as individual flags, alongside the United Kingdom.",
       "Speed Match now records the fastest full-board completion time, rather than a score.",

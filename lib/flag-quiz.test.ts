@@ -37,9 +37,9 @@ describe("answer normalization", () => {
     expect(isCorrectAnswer("Greece", turkey!)).toBe(false);
   });
 
-  it("includes the selected UK home nations alongside the United Kingdom", () => {
-    expect(COUNTRIES.filter((country) => ["gb", "gb-eng", "gb-sct", "gb-wls"].includes(country.code)).map((country) => country.name))
-      .toEqual(["England", "Scotland", "United Kingdom", "Wales"]);
+  it("includes the UK home nations alongside the United Kingdom", () => {
+    expect(COUNTRIES.filter((country) => ["gb", "gb-eng", "gb-nir", "gb-sct", "gb-wls"].includes(country.code)).map((country) => country.name))
+      .toEqual(["England", "Northern Ireland", "Scotland", "United Kingdom", "Wales"]);
   });
 });
 
