@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { COUNTRIES } from "@/app/data/countries";
 import {
+  FLAG_MATCH_TIMED_CORRECT_BONUS_MS,
   QUESTIONS_PER_GAME,
   SPEED_MATCH_UNLIMITED_VISIBLE_FLAGS,
   createMultipleChoiceOptions,
   createQuestionDeck,
   createSpeedMatchTargetDeck,
   createSpeedMatchUnlimitedColumns,
+  extendDeadline,
   getRemainingDuration,
   getTimeLeft,
   getNextRoundAction,
@@ -131,5 +133,12 @@ describe("Speed Match timer", () => {
     expect(getTimeLeft(deadline, initialNow)).toBe(9);
     expect(remainingDuration).toBe(8_100);
     expect(getTimeLeft(resumedDeadline, 30_000)).toBe(9);
+  });
+
+  it("adds three seconds to a timed Flag Match Unlimited run after a correct flag", () => {
+    const deadline = 50_000;
+
+    expect(extendDeadline(deadline, FLAG_MATCH_TIMED_CORRECT_BONUS_MS)).toBe(53_000);
+    expect(getTimeLeft(extendDeadline(60_000, FLAG_MATCH_TIMED_CORRECT_BONUS_MS), 0)).toBe(63);
   });
 });

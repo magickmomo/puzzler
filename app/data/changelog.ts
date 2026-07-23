@@ -9,6 +9,17 @@ export type ChangelogEntry = {
 export const CHANGELOG_ENTRIES: readonly ChangelogEntry[] = [
   {
     date: "July 23, 2026",
+    title: "Flag Match gets a timer choice",
+    summary: "Flag Match Unlimited now supports both a relaxed live board and a 60-second score chase, with a clearer in-game status bar.",
+    highlights: [
+      "Choose a no-timer run or a 60-second run; every correct flag in the timed mode adds 3 seconds.",
+      "Score, timer, and Pause controls have been rebalanced for a cleaner mobile game header.",
+      "Pause stays visually solid while a correctly matched flag moves into place.",
+      "Back to Hub is now named consistently throughout Puzzler.",
+    ],
+  },
+  {
+    date: "July 23, 2026",
     title: "Match Capital Cities arrives",
     summary: "A new board-clearing game challenges you to connect ten countries with their capitals as quickly as you can.",
     highlights: [

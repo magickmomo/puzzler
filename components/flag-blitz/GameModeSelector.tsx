@@ -32,8 +32,8 @@ const GAME_MODES: ReadonlyArray<{
   {
     id: "speed-match-unlimited",
     label: "Flag Match Unlimited",
-    description: "Keep finding flags on a live board with no time limit.",
-    badge: "Untimed",
+    description: "Keep a live board going with no timer or a 60-second score chase.",
+    badge: "Timer choice",
     icon: "∞",
   },
 ];

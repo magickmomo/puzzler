@@ -12,7 +12,7 @@ import { usePuzzlerStore } from "@/lib/puzzler-store";
 
 const REPORT_FILTERS: readonly FlagReportFilter[] = ["all", ...FLAG_REPORT_GAME_MODES];
 
-export function FlagReport({ onBack }: { onBack: () => void }) {
+export function FlagReport({ onBack, onHub }: { onBack: () => void; onHub: () => void }) {
   const flagStatsByMode = usePuzzlerStore((state) => state.flagBlitz.flagStatsByMode);
   const [filter, setFilter] = useState<FlagReportFilter>("all");
   const entries = useMemo(() => getHardestFlags(flagStatsByMode, filter), [filter, flagStatsByMode]);
@@ -24,7 +24,9 @@ export function FlagReport({ onBack }: { onBack: () => void }) {
           <span aria-hidden="true">←</span> Flag Blitz
         </button>
         <p className="text-base font-black tracking-tight text-white">Flag Report</p>
-        <span className="min-w-12" aria-hidden="true" />
+        <button type="button" onClick={onHub} className="flex min-h-12 items-center rounded-xl px-2 text-sm font-bold text-cyan-300 transition hover:text-cyan-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+          Back to Hub
+        </button>
       </header>
 
       <section className="py-8" aria-labelledby="flag-report-title">

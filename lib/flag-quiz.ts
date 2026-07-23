@@ -11,6 +11,7 @@ export type ScoreState = {
 
 export const QUESTIONS_PER_GAME = 10;
 export const SPEED_MATCH_TIME_LIMIT_MS = 60_000;
+export const FLAG_MATCH_TIMED_CORRECT_BONUS_MS = 3_000;
 export const SPEED_MATCH_UNLIMITED_VISIBLE_FLAGS = 9;
 export const SPEED_MATCH_UNLIMITED_COLUMN_COUNT = 3;
 export const SPEED_MATCH_UNLIMITED_QUEUED_FLAGS = SPEED_MATCH_UNLIMITED_COLUMN_COUNT;
@@ -25,6 +26,10 @@ export function getRemainingDuration(deadline: number, now = Date.now()): number
 
 export function restoreDeadline(remainingDuration: number, now = Date.now()): number {
   return now + Math.max(0, remainingDuration);
+}
+
+export function extendDeadline(deadline: number, additionalDuration: number): number {
+  return deadline + Math.max(0, additionalDuration);
 }
 
 export function shuffle<T>(items: readonly T[]): T[] {
