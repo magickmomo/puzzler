@@ -8,6 +8,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: readonly ChangelogEntry[] = [
   {
+    date: "July 24, 2026",
+    title: "Direct links for every game",
+    summary: "Each live game now has its own shareable page.",
+    highlights: [
+      "Link directly to Flag Blitz at /flag-blitz or Match Capital Cities at /capital-cities.",
+      "Flag Blitz now keeps its Flag Report and settings at their own direct URLs too.",
+      "Hub game cards now navigate using real page links instead of internal-only routing.",
+    ],
+  },
+  {
     date: "July 23, 2026",
     title: "Flag Match gets a timer choice",
     summary: "Flag Match Unlimited now supports both a relaxed live board and a 60-second score chase, with a clearer in-game status bar.",

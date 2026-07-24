@@ -15,14 +15,9 @@ import {
   type PuzzlerSettings,
 } from "./puzzler-settings";
 
-export type GameId = "flag-blitz" | "capital-cities";
-export type FlagBlitzView = "play" | "report" | "settings";
-
 type AppRoute =
   | { screen: "hub" }
-  | { screen: "changelog" }
-  | { screen: "game"; gameId: "flag-blitz"; view: FlagBlitzView }
-  | { screen: "game"; gameId: "capital-cities" };
+  | { screen: "changelog" };
 
 export type FlagBlitzProfile = BestScores & {
   totalPlays: number;
@@ -41,8 +36,6 @@ type PuzzlerStore = {
   capitalCities: CapitalCitiesProfile;
   goHome: () => void;
   openChangelog: () => void;
-  openFlagBlitz: (view?: FlagBlitzView) => void;
-  openCapitalCities: () => void;
   recordFlagBlitzPlay: () => void;
   recordFlagBlitzResult: (gameMode: GameMode, score: number, speedMatchCompletionTimeMs?: number) => void;
   recordFlagBlitzAttempt: (gameMode: GameMode, countryCode: string, correct: boolean) => void;
@@ -133,8 +126,6 @@ export const usePuzzlerStore = create<PuzzlerStore>()(
       capitalCities: createDefaultCapitalCitiesProfile(),
       goHome: () => set({ route: { screen: "hub" } }),
       openChangelog: () => set({ route: { screen: "changelog" } }),
-      openFlagBlitz: (view = "play") => set({ route: { screen: "game", gameId: "flag-blitz", view } }),
-      openCapitalCities: () => set({ route: { screen: "game", gameId: "capital-cities" } }),
       recordFlagBlitzPlay: () => set((state) => ({
         flagBlitz: { ...state.flagBlitz, totalPlays: state.flagBlitz.totalPlays + 1 },
       })),
