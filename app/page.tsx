@@ -1,11 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import type { ReactNode } from "react";
-import { CapitalCities } from "@/components/capital-cities/CapitalCities";
-import { FlagBlitz } from "@/components/flag-blitz/FlagBlitz";
 import { Changelog } from "@/components/Changelog";
-import { FlagReport } from "@/components/FlagReport";
-import { Settings } from "@/components/Settings";
 import { usePuzzlerStore } from "@/lib/puzzler-store";
 
 type GameCardConfig = {
@@ -16,6 +13,7 @@ type GameCardConfig = {
   accent: string;
   icon: ReactNode;
   available: boolean;
+  href?: "/flag-blitz" | "/capital-cities";
 };
 
 const SHOW_DEV_GAMES = process.env.NEXT_PUBLIC_PUZZLER_MODE === "dev";
@@ -43,6 +41,7 @@ const GAME_CARDS: readonly GameCardConfig[] = [
     accent: "from-cyan-400 to-blue-500",
     icon: "⚑",
     available: true,
+    href: "/flag-blitz",
   },
   {
     id: "capital-cities",
@@ -52,6 +51,7 @@ const GAME_CARDS: readonly GameCardConfig[] = [
     accent: "from-violet-400 to-fuchsia-500",
     icon: <EiffelTowerIcon />,
     available: true,
+    href: "/capital-cities",
   },
   {
     id: "number-drop",
@@ -92,7 +92,7 @@ function HubHeader({ onOpenChangelog }: { onOpenChangelog: () => void }) {
   );
 }
 
-function GameCard({ game, onLaunch }: { game: GameCardConfig; onLaunch: () => void }) {
+function GameCard({ game }: { game: GameCardConfig }) {
   const commonClasses = "group relative min-h-52 overflow-hidden rounded-3xl border p-5 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950";
   const content = (
     <>
@@ -122,18 +122,10 @@ function GameCard({ game, onLaunch }: { game: GameCardConfig; onLaunch: () => vo
     return <article aria-disabled="true" className={`${commonClasses} cursor-not-allowed border-slate-800/70 bg-slate-900/35 opacity-60`}>{content}</article>;
   }
 
-  return <button type="button" onClick={onLaunch} className={`${commonClasses} w-full border-slate-700/80 bg-slate-900/80 hover:-translate-y-1 hover:border-cyan-300/40 hover:bg-slate-900`}>{content}</button>;
+  return <Link href={game.href!} className={`${commonClasses} block w-full border-slate-700/80 bg-slate-900/80 hover:-translate-y-1 hover:border-cyan-300/40 hover:bg-slate-900`}>{content}</Link>;
 }
 
-function Hub({
-  onLaunchFlagBlitz,
-  onLaunchCapitalCities,
-  onOpenChangelog,
-}: {
-  onLaunchFlagBlitz: () => void;
-  onLaunchCapitalCities: () => void;
-  onOpenChangelog: () => void;
-}) {
+function Hub({ onOpenChangelog }: { onOpenChangelog: () => void }) {
   const visibleGames = SHOW_DEV_GAMES ? GAME_CARDS : GAME_CARDS.filter((game) => game.available);
 
   return (
@@ -148,16 +140,7 @@ function Hub({
           <span className="hidden rounded-full border border-slate-800 px-3 py-2 text-xs font-bold text-slate-500 sm:block">{SHOW_DEV_GAMES ? "Dev catalog" : "2 games live"}</span>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {visibleGames.map((game) => (
-            <GameCard
-              key={game.id}
-              game={game}
-              onLaunch={() => {
-                if (game.id === "flag-blitz") onLaunchFlagBlitz();
-                if (game.id === "capital-cities") onLaunchCapitalCities();
-              }}
-            />
-          ))}
+          {visibleGames.map((game) => <GameCard key={game.id} game={game} />)}
         </div>
       </section>
       <footer className="mt-10 border-t border-slate-900 pt-5 text-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-700">New games loading</footer>
@@ -169,21 +152,13 @@ export default function PuzzlerApp() {
   const route = usePuzzlerStore((state) => state.route);
   const goHome = usePuzzlerStore((state) => state.goHome);
   const openChangelog = usePuzzlerStore((state) => state.openChangelog);
-  const openFlagBlitz = usePuzzlerStore((state) => state.openFlagBlitz);
-  const openCapitalCities = usePuzzlerStore((state) => state.openCapitalCities);
 
   return (
     <div className="min-h-[100dvh] bg-slate-950 text-slate-50 antialiased">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top,rgba(8,145,178,0.12),transparent_34rem)]" />
       <div className="relative">
-        {route.screen === "hub" && <Hub onLaunchFlagBlitz={() => openFlagBlitz()} onLaunchCapitalCities={openCapitalCities} onOpenChangelog={openChangelog} />}
+        {route.screen === "hub" && <Hub onOpenChangelog={openChangelog} />}
         {route.screen === "changelog" && <Changelog onBack={goHome} />}
-        {route.screen === "game" && route.gameId === "flag-blitz" && route.view === "play" && (
-          <FlagBlitz onBack={goHome} onOpenReport={() => openFlagBlitz("report")} onOpenSettings={() => openFlagBlitz("settings")} />
-        )}
-        {route.screen === "game" && route.gameId === "flag-blitz" && route.view === "report" && <FlagReport onBack={() => openFlagBlitz("play")} onHub={goHome} />}
-        {route.screen === "game" && route.gameId === "flag-blitz" && route.view === "settings" && <Settings onBack={() => openFlagBlitz("play")} onHub={goHome} />}
-        {route.screen === "game" && route.gameId === "capital-cities" && <CapitalCities onBack={goHome} />}
       </div>
     </div>
   );

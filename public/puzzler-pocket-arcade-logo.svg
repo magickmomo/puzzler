@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 404" role="img" aria-labelledby="title desc">
+  <title id="title">Puzzler Pocket Arcade</title>
+  <desc id="desc">The Puzzler Pocket Arcade logo with a four-tile game mark.</desc>
+  <defs>
+    <radialGradient id="backgroundGlow" cx="28%" cy="50%" r="78%">
+      <stop offset="0" stop-color="#0f2543" />
+      <stop offset="0.5" stop-color="#071225" />
+      <stop offset="1" stop-color="#020617" />
+    </radialGradient>
+    <linearGradient id="markFill" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#0b2a3a" />
+      <stop offset="1" stop-color="#071827" />
+    </linearGradient>
+    <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="10" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1080" height="404" fill="url(#backgroundGlow)" />
+
+  <g transform="translate(108 82)">
+    <rect x="0" y="0" width="188" height="188" rx="62" fill="url(#markFill)" stroke="#67e8f9" stroke-opacity="0.28" stroke-width="4" />
+    <g filter="url(#softGlow)">
+      <rect x="38" y="34" width="50" height="50" rx="7" fill="#67e8f9" />
+      <rect x="104" y="34" width="50" height="50" rx="7" fill="#3b82f6" />
+      <rect x="38" y="102" width="50" height="50" rx="7" fill="#3b82f6" />
+      <rect x="104" y="102" width="50" height="50" rx="7" fill="none" stroke="#67e8f9" stroke-opacity="0.7" stroke-width="4" />
+    </g>
+  </g>
+
+  <g font-family="Arial, Helvetica, sans-serif">
+    <text x="350" y="128" fill="#67e8f9" font-size="38" font-weight="700" letter-spacing="17">POCKET ARCADE</text>
+    <text x="350" y="240" fill="#f8fafc" font-size="76" font-weight="800" letter-spacing="-3">Puzzler</text>
+  </g>
+</svg>
