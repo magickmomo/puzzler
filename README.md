@@ -43,6 +43,38 @@ NEXT_PUBLIC_PUZZLER_MODE=dev
 
 `NEXT_PUBLIC_` variables are embedded at build time, so a redeploy is required after changing the value.
 
+## Consent-gated analytics
+
+Puzzler only loads optional tracking after a player makes an explicit choice in the cookie dialog. Necessary browser storage remains enabled for local game records and the saved consent choice.
+
+Required production configuration:
+
+```text
+NEXT_PUBLIC_ANALYTICS_ENABLED=true
+NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN=your_posthog_project_token
+NEXT_PUBLIC_POSTHOG_HOST=your_posthog_host
+NEXT_PUBLIC_META_PIXEL_ID=your_meta_pixel_id
+```
+
+`NEXT_PUBLIC_ANALYTICS_ENABLED` is a master switch for both destinations. Leave it unset or set it to `false` in local and Vercel preview deployments so test activity cannot contaminate production analytics. These values are public browser configuration values, not secrets; configure real values in Vercel rather than committing them.
+
+When Analytics is accepted, PostHog EU receives explicit page, game, campaign, and Web Vitals events with an ephemeral pseudonymous visitor ID. Autocapture, automatic page-view capture, campaign/referrer capture, feature flags, session recording, heatmaps, console/network recording, `identify`, and known-person profiles are disabled. Puzzler deliberately emits PostHog&apos;s reserved `$pageview` event with only a sanitised origin and route path, and enables only LCP, CLS, FCP, and INP Web Vitals with attribution and network timing disabled. PostHog&apos;s local Web Vitals callbacks are loaded only after Analytics consent; remote extension loading remains disabled. PostHog runs in memory-only mode with provider persistence disabled, and a final `before_send` allowlist fails closed unless the required `token`, `distinct_id`, and `$process_person_profile: false` transport fields are valid. It removes SDK-added raw URLs, referrers, device, browser, and session data, while retaining only the sanitised origin and path needed for page and per-page Web Vitals reporting. When Marketing is accepted, the Meta Pixel receives deliberate `PageView` events and one `FirstGameCompleted` custom conversion while Marketing consent remains granted. Automatic advanced matching is not used. Rejecting non-essential cookies loads neither service. Preferences can be changed or withdrawn from the persistent **Cookie settings** footer control.
+
+### Event taxonomy
+
+PostHog uses these snake-case events: `ad_landing_viewed`, `game_selected`, `game_started`, `game_completed`, `game_abandoned`, `replay_started`, and `first_game_completed`. It also records PostHog&apos;s reserved `$pageview` event with a sanitised `$current_url`, and the `$web_vitals` event with only numeric LCP, CLS, FCP, and INP values plus that same sanitised page URL.
+
+Events use only the relevant values from: game, mode, difficulty, timer enabled, score, elapsed duration, aggregate mistakes/progress, a sanitised origin and path without its query string or fragment, and the allowlisted `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, and `utm_term` values. UTM values are limited to short URL-safe campaign labels. Puzzler never sends typed answers, country-level attempts, player names, email addresses, or other player profile data to PostHog. Campaign attribution is stored only after Analytics consent, and PostHog never receives a raw full query string or fragment.
+
+### Verifying production tracking
+
+1. In a production deployment with the variables above, open the site in a fresh browser profile and accept the relevant category.
+2. For PostHog, use Live Events and verify the explicit event name, documented event properties, a non-empty `token`, a non-empty `distinct_id`, and `$process_person_profile: false`. Confirm that `$pageview` and `$web_vitals` each contain only a sanitised `$current_url` with its origin and route path; `$web_vitals` may also contain numeric LCP/CLS/FCP/INP values. No query string, fragment, referrer, device, browser, or session properties should be present. Rejecting Analytics must cause no further events.
+3. For Meta, use Events Manager → Test Events, accept Marketing, then load a page to see `PageView`. Complete a first game to see `FirstGameCompleted` with only a `game` property.
+4. Change Cookie settings to reject the category and confirm that later gameplay produces no additional destination-specific events.
+
+Use a separate PostHog project and Meta Pixel for a staging environment if tracking is required there. Do not enable the production values on preview URLs.
+
 ## Player records
 
 Completed runs, Flag Report data, and flag settings are stored in the browser using Zustand persistence. They belong to Flag Blitz itself: its launcher shows total runs, best Classic score, best Classic Unlimited streak, fastest completed Speed Match time, and best Flag Match Unlimited score. Flag Report records attempts, correct answers, and misses for each country in every Flag Blitz mode. Match Capital Cities keeps its own number of starts and fastest completion time. Records remain local to the browser and are not synced between devices, and future games can keep their own separate profiles.

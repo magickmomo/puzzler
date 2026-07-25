@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { AnalyticsConsentProvider } from "@/components/analytics/AnalyticsConsentProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -18,7 +19,9 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AnalyticsConsentProvider>{children}</AnalyticsConsentProvider>
+      </body>
     </html>
   );
 }

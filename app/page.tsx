@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Changelog } from "@/components/Changelog";
+import { trackGameSelected } from "@/lib/analytics";
 import { usePuzzlerStore } from "@/lib/puzzler-store";
 
 type GameCardConfig = {
@@ -122,7 +123,15 @@ function GameCard({ game }: { game: GameCardConfig }) {
     return <article aria-disabled="true" className={`${commonClasses} cursor-not-allowed border-slate-800/70 bg-slate-900/35 opacity-60`}>{content}</article>;
   }
 
-  return <Link href={game.href!} className={`${commonClasses} block w-full border-slate-700/80 bg-slate-900/80 hover:-translate-y-1 hover:border-cyan-300/40 hover:bg-slate-900`}>{content}</Link>;
+  return (
+    <Link
+      href={game.href!}
+      onClick={() => void trackGameSelected(game.id === "flag-blitz" ? "flag_blitz" : "capital_cities")}
+      className={`${commonClasses} block w-full border-slate-700/80 bg-slate-900/80 hover:-translate-y-1 hover:border-cyan-300/40 hover:bg-slate-900`}
+    >
+      {content}
+    </Link>
+  );
 }
 
 function Hub({ onOpenChangelog }: { onOpenChangelog: () => void }) {
@@ -143,7 +152,7 @@ function Hub({ onOpenChangelog }: { onOpenChangelog: () => void }) {
           {visibleGames.map((game) => <GameCard key={game.id} game={game} />)}
         </div>
       </section>
-      <footer className="mt-10 border-t border-slate-900 pt-5 text-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-700">New games loading</footer>
+      <p className="mt-10 border-t border-slate-900 pt-5 text-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-700">New games loading</p>
     </main>
   );
 }
