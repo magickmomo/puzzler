@@ -34,6 +34,7 @@ export type AnalyticsDifficulty = "easy" | "medium" | "hard";
 
 export type AnalyticsEventProperties = {
   ad_landing_viewed: { landing_path: string } & CampaignAttribution;
+  page_view: { page_path: string };
   game_selected: { game: AnalyticsGame };
   game_started: {
     game: AnalyticsGame;
@@ -90,7 +91,12 @@ type PostHogOptions = {
   api_host: string;
   autocapture: false;
   capture_pageview: false;
-  capture_performance: false;
+  capture_performance: {
+    web_vitals: true;
+    web_vitals_allowed_metrics: ["LCP", "CLS", "FCP", "INP"];
+    web_vitals_attribution: false;
+    network_timing: false;
+  };
   disable_session_recording: true;
   disable_external_dependency_loading: true;
   disable_surveys: true;
@@ -137,6 +143,7 @@ const CAMPAIGN_PARAMETERS = [
 
 const ANALYTICS_EVENT_NAMES = [
   "ad_landing_viewed",
+  "page_view",
   "game_selected",
   "game_started",
   "game_completed",
@@ -144,6 +151,12 @@ const ANALYTICS_EVENT_NAMES = [
   "replay_started",
   "first_game_completed",
 ] as const satisfies readonly AnalyticsEventName[];
+
+type PostHogEventName = AnalyticsEventName | "$web_vitals";
+const POSTHOG_EVENT_NAMES = new Set<PostHogEventName>([
+  ...ANALYTICS_EVENT_NAMES,
+  "$web_vitals",
+]);
 
 const ANALYTICS_EVENT_PROPERTY_KEYS = new Set<string>([
   "game",
@@ -155,18 +168,29 @@ const ANALYTICS_EVENT_PROPERTY_KEYS = new Set<string>([
   "mistakes",
   "progress",
   "landing_path",
+  "page_path",
   ...CAMPAIGN_PARAMETERS,
 ]);
 
-// PostHog requires its project token to ingest an event. All other SDK-added
-// properties, including URLs, referrers, device details, and session IDs, are
-// removed just before delivery.
-const POSTHOG_REQUIRED_TRANSPORT_PROPERTY_KEYS = new Set(["token"]);
+// PostHog requires its project token and anonymous distinct ID to ingest an
+// event. The explicit false value prevents anonymous events from creating a
+// person profile. All other SDK-added properties are removed before delivery.
+const POSTHOG_REQUIRED_TRANSPORT_PROPERTY_KEYS = new Set([
+  "token",
+  "distinct_id",
+  "$process_person_profile",
+]);
 const SAFE_UTM_VALUE = /^[a-zA-Z0-9._~-]{1,100}$/;
-const SAFE_LANDING_PATH = /^\/(?:[a-z0-9-]+\/)*$/;
+const SAFE_LANDING_PATH = /^\/(?:[a-z0-9-]+(?:\/[a-z0-9-]+)*)?\/?$/;
 const ANALYTICS_GAMES = new Set<AnalyticsGame>(["flag_blitz", "capital_cities"]);
 const FLAG_BLITZ_MODES = new Set<FlagBlitzMode>(["classic", "unlimited", "speed-match", "speed-match-unlimited"]);
 const ANALYTICS_DIFFICULTIES = new Set<AnalyticsDifficulty>(["easy", "medium", "hard"]);
+const WEB_VITAL_PROPERTY_KEYS = new Set([
+  "$web_vitals_LCP_value",
+  "$web_vitals_CLS_value",
+  "$web_vitals_FCP_value",
+  "$web_vitals_INP_value",
+]);
 
 function getBrowserStorage(): StorageLike | undefined {
   if (typeof window === "undefined") return undefined;
@@ -223,21 +247,24 @@ function toProperties(properties: Record<string, string | number | boolean | und
   return safeProperties;
 }
 
-function isAnalyticsEventName(value: string): value is AnalyticsEventName {
-  return ANALYTICS_EVENT_NAMES.includes(value as AnalyticsEventName);
+function isPostHogEventName(value: string): value is PostHogEventName {
+  return POSTHOG_EVENT_NAMES.has(value as PostHogEventName);
 }
 
 function isSafeAnalyticsProperty(key: string, value: unknown): value is AnalyticsPropertyValue {
   if (key === "token") return typeof value === "string";
+  if (key === "distinct_id") return typeof value === "string" && value.trim().length > 0;
+  if (key === "$process_person_profile") return value === false;
   if (CAMPAIGN_PARAMETERS.includes(key as (typeof CAMPAIGN_PARAMETERS)[number])) return typeof value === "string" && SAFE_UTM_VALUE.test(value);
   if (key === "game") return typeof value === "string" && ANALYTICS_GAMES.has(value as AnalyticsGame);
   if (key === "mode") return typeof value === "string" && FLAG_BLITZ_MODES.has(value as FlagBlitzMode);
   if (key === "difficulty") return typeof value === "string" && ANALYTICS_DIFFICULTIES.has(value as AnalyticsDifficulty);
-  if (key === "landing_path") return typeof value === "string" && SAFE_LANDING_PATH.test(value);
+  if (key === "landing_path" || key === "page_path") return typeof value === "string" && SAFE_LANDING_PATH.test(value);
   if (key === "timer_enabled") return typeof value === "boolean";
   if (key === "score" || key === "duration_ms" || key === "mistakes" || key === "progress") {
     return typeof value === "number" && Number.isFinite(value) && value >= 0;
   }
+  if (WEB_VITAL_PROPERTY_KEYS.has(key)) return typeof value === "number" && Number.isFinite(value) && value >= 0;
 
   return false;
 }
@@ -248,12 +275,13 @@ function isSafeAnalyticsProperty(key: string, value: unknown): value is Analytic
  * token PostHog needs to accept the event.
  */
 export function sanitizePostHogEvent(payload: PostHogCapturePayload): PostHogCapturePayload | null {
-  if (!isAnalyticsEventName(payload.event)) return null;
+  if (!isPostHogEventName(payload.event)) return null;
 
   const properties: Record<string, AnalyticsPropertyValue> = {};
+  const eventPropertyKeys = payload.event === "$web_vitals" ? WEB_VITAL_PROPERTY_KEYS : ANALYTICS_EVENT_PROPERTY_KEYS;
 
   for (const [key, value] of Object.entries(payload.properties)) {
-    if (!ANALYTICS_EVENT_PROPERTY_KEYS.has(key) && !POSTHOG_REQUIRED_TRANSPORT_PROPERTY_KEYS.has(key)) continue;
+    if (!eventPropertyKeys.has(key) && !POSTHOG_REQUIRED_TRANSPORT_PROPERTY_KEYS.has(key)) continue;
     if (!isSafeAnalyticsProperty(key, value)) continue;
     properties[key] = value;
   }
@@ -393,6 +421,7 @@ export function createAnalyticsClient(
   let metaPixelPromise: Promise<MetaClient | null> | null = null;
   let firstCompletionPromise: Promise<void> | null = null;
   let lastAdLandingSignature: string | null = null;
+  let lastPostHogPagePath: string | null = null;
   let lastMetaPagePath: string | null = null;
 
   const posthogAllowed = () => config.enabled && consent.analytics && Boolean(config.posthogToken && config.posthogHost);
@@ -415,7 +444,12 @@ export function createAnalyticsClient(
           api_host: config.posthogHost!,
           autocapture: false,
           capture_pageview: false,
-          capture_performance: false,
+          capture_performance: {
+            web_vitals: true,
+            web_vitals_allowed_metrics: ["LCP", "CLS", "FCP", "INP"],
+            web_vitals_attribution: false,
+            network_timing: false,
+          },
           disable_session_recording: true,
           disable_external_dependency_loading: true,
           disable_surveys: true,
@@ -527,6 +561,7 @@ export function createAnalyticsClient(
 
       if (!nextConsent.analytics) {
         removeStoredValue(storage, CAMPAIGN_STORAGE_KEY);
+        lastPostHogPagePath = null;
         if (analyticsWasEnabled) {
           const deliveries = readCompletionDelivery(storage);
           delete deliveries.posthog;
@@ -567,6 +602,12 @@ export function createAnalyticsClient(
       await track("ad_landing_viewed", { landing_path: path, ...campaign });
     },
 
+    async trackPageView(path: string): Promise<void> {
+      if (!posthogAllowed() || path === lastPostHogPagePath) return;
+      lastPostHogPagePath = path;
+      await track("page_view", { page_path: path });
+    },
+
     async trackMetaPageView(path: string): Promise<void> {
       if (!metaAllowed() || path === lastMetaPagePath) return;
       lastMetaPagePath = path;
@@ -603,6 +644,10 @@ export function setAnalyticsConsent(consent: ConsentPreferences): Promise<void> 
 
 export function captureAdLanding(path: string, search: string): Promise<void> {
   return browserAnalytics.trackAdLanding(path, search);
+}
+
+export function capturePageView(path: string): Promise<void> {
+  return browserAnalytics.trackPageView(path);
 }
 
 export function captureMetaPageView(path: string): Promise<void> {

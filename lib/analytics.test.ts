@@ -173,7 +173,7 @@ describe("analytics data minimisation", () => {
     });
   });
 
-  it("removes SDK-added browser data and undeclared events before PostHog delivery", async () => {
+  it("keeps the required anonymous transport fields while removing SDK-added browser data", async () => {
     const analytics = createTestAnalytics();
 
     await analytics.client.setConsent({ analytics: true, marketing: false });
@@ -181,7 +181,12 @@ describe("analytics data minimisation", () => {
     const options = initCall?.options as {
       autocapture: boolean;
       capture_pageview: boolean;
-      capture_performance: boolean;
+      capture_performance: {
+        web_vitals: boolean;
+        web_vitals_allowed_metrics: string[];
+        web_vitals_attribution: boolean;
+        network_timing: boolean;
+      };
       persistence: string;
       disable_persistence: boolean;
       save_campaign_params: boolean;
@@ -192,7 +197,12 @@ describe("analytics data minimisation", () => {
     expect(options).toMatchObject({
       autocapture: false,
       capture_pageview: false,
-      capture_performance: false,
+      capture_performance: {
+        web_vitals: true,
+        web_vitals_allowed_metrics: ["LCP", "CLS", "FCP", "INP"],
+        web_vitals_attribution: false,
+        network_timing: false,
+      },
       persistence: "memory",
       disable_persistence: true,
       save_campaign_params: false,
@@ -202,18 +212,93 @@ describe("analytics data minimisation", () => {
       event: "game_completed",
       properties: {
         token: "project-token",
+        distinct_id: "0199da17-863d-7c90-8cff-940f8f5adf20",
+        "$process_person_profile": false,
         game: "flag_blitz",
         score: 10,
         "$current_url": "https://puzzler.example/?email=not-allowed",
         "$referrer": "https://referrer.example/?secret=no",
         "$browser": "Browser name",
+        "$session_id": "session-id",
         arbitrary: "not allowed",
       },
     })).toEqual({
       event: "game_completed",
-      properties: { token: "project-token", game: "flag_blitz", score: 10 },
+      properties: {
+        token: "project-token",
+        distinct_id: "0199da17-863d-7c90-8cff-940f8f5adf20",
+        "$process_person_profile": false,
+        game: "flag_blitz",
+        score: 10,
+      },
     });
     expect(options.before_send({ event: "$opt_in", properties: { token: "project-token" } })).toBeNull();
+  });
+
+  it("keeps real Next.js landing paths without their query string", () => {
+    expect(sanitizePostHogEvent({
+      event: "ad_landing_viewed",
+      properties: {
+        token: "project-token",
+        distinct_id: "anonymous-id",
+        "$process_person_profile": false,
+        landing_path: "/flag-blitz",
+      },
+    })?.properties.landing_path).toBe("/flag-blitz");
+
+    expect(sanitizePostHogEvent({
+      event: "ad_landing_viewed",
+      properties: {
+        token: "project-token",
+        distinct_id: "anonymous-id",
+        "$process_person_profile": false,
+        landing_path: "/capital-cities",
+      },
+    })?.properties.landing_path).toBe("/capital-cities");
+  });
+
+  it("rejects invalid anonymous transport values", () => {
+    expect(sanitizePostHogEvent({
+      event: "game_selected",
+      properties: {
+        token: "project-token",
+        distinct_id: "   ",
+        "$process_person_profile": true,
+        game: "flag_blitz",
+      },
+    })).toEqual({
+      event: "game_selected",
+      properties: { token: "project-token", game: "flag_blitz" },
+    });
+  });
+
+  it("keeps only the four numeric Web Vitals alongside anonymous transport fields", () => {
+    expect(sanitizePostHogEvent({
+      event: "$web_vitals",
+      properties: {
+        token: "project-token",
+        distinct_id: "anonymous-id",
+        "$process_person_profile": false,
+        "$web_vitals_LCP_value": 2100,
+        "$web_vitals_CLS_value": 0.04,
+        "$web_vitals_FCP_value": 900,
+        "$web_vitals_INP_value": 120,
+        "$web_vitals_LCP_event": { $current_url: "https://puzzler.example/?email=not-allowed" },
+        "$current_url": "https://puzzler.example/?email=not-allowed",
+        "$session_id": "session-id",
+      },
+    })).toEqual({
+      event: "$web_vitals",
+      properties: {
+        token: "project-token",
+        distinct_id: "anonymous-id",
+        "$process_person_profile": false,
+        "$web_vitals_LCP_value": 2100,
+        "$web_vitals_CLS_value": 0.04,
+        "$web_vitals_FCP_value": 900,
+        "$web_vitals_INP_value": 120,
+      },
+    });
   });
 });
 
@@ -276,11 +361,16 @@ describe("analytics event delivery guards", () => {
       analytics.client.trackAdLanding("/flag-blitz", "?utm_source=facebook&utm_campaign=summer"),
     ]);
     await Promise.all([
+      analytics.client.trackPageView("/flag-blitz"),
+      analytics.client.trackPageView("/flag-blitz"),
+    ]);
+    await Promise.all([
       analytics.client.trackMetaPageView("/flag-blitz"),
       analytics.client.trackMetaPageView("/flag-blitz"),
     ]);
 
     expect(analytics.posthogCalls.filter((call) => call.event === "ad_landing_viewed")).toHaveLength(1);
+    expect(analytics.posthogCalls.filter((call) => call.event === "page_view")).toHaveLength(1);
     expect(analytics.metaCalls.filter((call) => call.type === "page_view")).toHaveLength(1);
   });
 });

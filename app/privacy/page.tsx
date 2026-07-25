@@ -3,7 +3,7 @@ import Link from "next/link";
 const PROVIDERS = [
   {
     provider: "PostHog, EU-hosted",
-    purpose: "Pseudonymous product usage, game completions, campaign attribution, and site-performance measurement.",
+    purpose: "Explicit page, game, campaign, and Web Vitals events using an ephemeral pseudonymous visitor ID.",
     category: "Analytics",
     href: "https://posthog.com/privacy",
     linkLabel: "PostHog Privacy Policy",
@@ -39,7 +39,7 @@ export default function PrivacyPage() {
 
           <section>
             <h2 className="text-lg font-black text-white">Optional measurement</h2>
-            <p className="mt-2">With your permission, we use PostHog to understand how visitors use our games and how the website performs. We use Meta Pixel separately to measure the results of our advertising. These services remain disabled until you consent to the relevant category. You can change or withdraw your choices at any time through Cookie settings.</p>
+            <p className="mt-2">With your permission, we use PostHog to understand which pages, games, campaign links, and Web Vitals are working well. We use Meta Pixel separately to measure the results of our advertising. These services remain disabled until you consent to the relevant category. You can change or withdraw your choices at any time through Cookie settings.</p>
             <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-800">
               <table className="min-w-[640px] w-full border-collapse text-left text-xs leading-5 sm:text-sm">
                 <thead className="bg-slate-950/70 text-slate-300">
@@ -64,9 +64,10 @@ export default function PrivacyPage() {
 
           <section>
             <h2 className="text-lg font-black text-white">What optional measurement can collect</h2>
-            <p className="mt-2">When the relevant option is accepted, this can include pseudonymous visitor or session identifiers, page paths, the game events listed below, device and browser information, and the allowlisted UTM campaign parameters in an advertising link. Puzzler only retains campaign parameters after Analytics consent.</p>
+            <p className="mt-2">When Analytics is accepted, PostHog receives only explicit page, game, campaign, and Web Vitals events, their path without a query string, allowlisted UTM campaign parameters, and an ephemeral pseudonymous visitor ID needed to ingest the event. Puzzler only retains campaign parameters after Analytics consent.</p>
             <ul className="mt-3 list-disc space-y-1 pl-5 text-slate-400">
-              <li>PostHog receives selected game, game mode, difficulty, timer setting, aggregate score, duration, mistakes, progress, permitted campaign attribution, and the project token needed to accept the event. Puzzler removes SDK-added URLs, referrers, device details, and session IDs before delivery.</li>
+              <li>PostHog receives route paths, selected game, game mode, difficulty, timer setting, aggregate score, duration, mistakes, progress, permitted campaign attribution, its project token, and the ephemeral visitor ID.</li>
+              <li>PostHog also receives only the numeric LCP, CLS, FCP, and INP Web Vitals values. It does not receive full URLs, referrers, device data, browser data, session IDs, Web Vitals attribution, network timing, or screen recordings from Puzzler.</li>
               <li>Meta receives PageView events and a FirstGameCompleted event containing only the game name while Marketing consent remains granted. Meta&apos;s Pixel may process browser and page information as described in Meta&apos;s own notice.</li>
             </ul>
             <p className="mt-3">Puzzler does not send names, email addresses, typed answers, country-level attempts, country names or codes, age information, or player profiles to PostHog. It does not use session replay, heatmaps, broad interaction autocapture, user identification, or Meta automatic advanced matching. Pseudonymous identifiers can still be personal data.</p>

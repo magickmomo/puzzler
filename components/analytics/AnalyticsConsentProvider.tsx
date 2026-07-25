@@ -6,6 +6,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import {
   captureAdLanding,
   captureMetaPageView,
+  capturePageView,
   persistConsent,
   readStoredConsent,
   setAnalyticsConsent,
@@ -169,6 +170,9 @@ function ConsentRouteTracker({ consent, analyticsReady }: { consent: ConsentPref
 
     void (async () => {
       const search = typeof window === "undefined" ? "" : window.location.search;
+      await capturePageView(pathname);
+      if (cancelled) return;
+
       await captureAdLanding(pathname, search);
       if (cancelled) return;
 
