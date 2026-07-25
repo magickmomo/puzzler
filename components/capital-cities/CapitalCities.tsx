@@ -20,7 +20,7 @@ import {
 } from "@/lib/analytics";
 import { useCookieSettings } from "@/components/analytics/AnalyticsConsentProvider";
 
-type RoundState = "playing" | "complete";
+type RoundState = "waiting" | "playing" | "complete";
 type ResolvingPair = {
   countryCode: string;
   capitalCode: string;
@@ -33,18 +33,18 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
   const recordPlay = usePuzzlerStore((state) => state.recordCapitalCitiesPlay);
   const recordResult = usePuzzlerStore((state) => state.recordCapitalCitiesResult);
   const bestTimeMs = usePuzzlerStore((state) => state.capitalCities.bestTimeMs);
-  const { analyticsConsentGranted, analyticsReady } = useCookieSettings();
+  const { analyticsConsentGranted, analyticsReady, consentResolved } = useCookieSettings();
   const [board, setBoard] = useState(() => createCapitalMatchBoard());
-  const [roundState, setRoundState] = useState<RoundState>("playing");
+  const [roundState, setRoundState] = useState<RoundState>("waiting");
   const [selectedCountryCode, setSelectedCountryCode] = useState<string | null>(null);
   const [selectedCapitalCode, setSelectedCapitalCode] = useState<string | null>(null);
   const [matchedCodes, setMatchedCodes] = useState<string[]>([]);
   const [resolvingPair, setResolvingPair] = useState<ResolvingPair>(null);
   const [mistakes, setMistakes] = useState(0);
   const [elapsedMs, setElapsedMs] = useState(0);
-  const startedAtRef = useRef(Date.now());
+  const startedAtRef = useRef<number | null>(null);
   const resolutionTimerRef = useRef<number | null>(null);
-  const initialRunRecordedRef = useRef(false);
+  const initialRunStartedRef = useRef(false);
   const initialGameStartedTrackedRef = useRef(false);
   const activeRunRef = useRef(false);
   const mistakesRef = useRef(0);
@@ -57,28 +57,29 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
     }
   }
 
-  useEffect(() => {
-    if (!initialRunRecordedRef.current) {
-      recordPlay();
-      activeRunRef.current = true;
-      initialRunRecordedRef.current = true;
-    }
-
-    return () => clearResolutionTimer();
-  }, [recordPlay]);
+  useEffect(() => () => clearResolutionTimer(), []);
 
   useEffect(() => {
-    if (!analyticsReady || !analyticsConsentGranted || initialGameStartedTrackedRef.current) return;
+    if (!consentResolved || initialRunStartedRef.current) return;
+
+    initialRunStartedRef.current = true;
+    startRun();
+  }, [consentResolved]);
+
+  useEffect(() => {
+    if (!activeRunRef.current || !analyticsReady || !analyticsConsentGranted || initialGameStartedTrackedRef.current) return;
 
     initialGameStartedTrackedRef.current = true;
     void trackGameStarted({ game: "capital_cities" });
   }, [analyticsConsentGranted, analyticsReady]);
 
   useEffect(() => {
-    if (roundState !== "playing") return;
+    if (roundState !== "playing" || startedAtRef.current === null) return;
 
     const timer = window.setInterval(() => {
-      setElapsedMs(getCapitalMatchElapsedMs(startedAtRef.current, mistakes));
+      if (startedAtRef.current !== null) {
+        setElapsedMs(getCapitalMatchElapsedMs(startedAtRef.current, mistakes));
+      }
     }, 100);
 
     return () => window.clearInterval(timer);
@@ -99,8 +100,10 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
     setMistakes(0);
     setElapsedMs(0);
     recordPlay();
-    if (isReplay) void trackReplayStarted({ game: "capital_cities" });
-    void trackGameStarted({ game: "capital_cities" });
+    if (isReplay) {
+      void trackReplayStarted({ game: "capital_cities" });
+      void trackGameStarted({ game: "capital_cities" });
+    }
   }
 
   function abandonRun() {
@@ -108,7 +111,7 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
       activeRunRef.current = false;
       void trackGameAbandoned({
         game: "capital_cities",
-        duration_ms: getCapitalMatchElapsedMs(startedAtRef.current, mistakesRef.current),
+        duration_ms: startedAtRef.current === null ? 0 : getCapitalMatchElapsedMs(startedAtRef.current, mistakesRef.current),
         mistakes: mistakesRef.current,
         progress: matchedCodesRef.current.length,
       });
@@ -134,7 +137,7 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
         setMatchedCodes(nextMatchedCodes);
 
         if (nextMatchedCodes.length === board.pairs.length) {
-          const finalElapsedMs = getCapitalMatchElapsedMs(startedAtRef.current, mistakesRef.current);
+          const finalElapsedMs = startedAtRef.current === null ? 0 : getCapitalMatchElapsedMs(startedAtRef.current, mistakesRef.current);
           setElapsedMs(finalElapsedMs);
           setRoundState("complete");
           recordResult(finalElapsedMs);

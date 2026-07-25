@@ -28,11 +28,13 @@ export default function PrivacyPage() {
         <p className="text-xs font-black uppercase tracking-[0.25em] text-cyan-300">Pocket Arcade</p>
         <h1 className="mt-2 text-3xl font-black tracking-tight text-white">Privacy notice</h1>
         <p className="mt-4 text-sm leading-7 text-slate-300">This is a plain-language implementation notice about how Puzzler currently works. It is not a claim of blanket legal compliance.</p>
+        <p className="mt-2 text-xs font-semibold text-slate-500">Last updated: 25 July 2026</p>
 
         <div className="mt-8 space-y-8 text-sm leading-7 text-slate-300">
           <section>
             <h2 className="text-lg font-black text-white">Who runs Puzzler</h2>
-            <p className="mt-2">Puzzler is operated by Pocket Arcade. For privacy questions or to exercise a privacy right, contact the Pocket Arcade Facebook Page, currently identified by Page ID 1277338905453734.</p>
+            <p className="mt-2">Puzzler is a personal project operated under the Pocket Arcade name. For privacy questions or to exercise a privacy right, contact the Pocket Arcade Facebook Page, currently identified by Page ID 1277338905453734.</p>
+            <p className="mt-3 text-slate-400">The individual operator&apos;s legal name, establishment country, and postal contact are not published on this site. Those details are needed to identify a specific data controller and the applicable supervisory authority, and will be added before this notice is relied on as a launch-ready privacy notice.</p>
           </section>
 
           <section>
@@ -64,31 +66,32 @@ export default function PrivacyPage() {
             <h2 className="text-lg font-black text-white">What optional measurement can collect</h2>
             <p className="mt-2">When the relevant option is accepted, this can include pseudonymous visitor or session identifiers, page paths, the game events listed below, device and browser information, and the allowlisted UTM campaign parameters in an advertising link. Puzzler only retains campaign parameters after Analytics consent.</p>
             <ul className="mt-3 list-disc space-y-1 pl-5 text-slate-400">
-              <li>PostHog receives selected game, game mode, difficulty, timer setting, aggregate score, duration, mistakes, progress, and permitted campaign attribution.</li>
-              <li>Meta receives PageView events and, once per browser, a FirstGameCompleted event containing only the game name.</li>
+              <li>PostHog receives selected game, game mode, difficulty, timer setting, aggregate score, duration, mistakes, progress, permitted campaign attribution, and the project token needed to accept the event. Puzzler removes SDK-added URLs, referrers, device details, and session IDs before delivery.</li>
+              <li>Meta receives PageView events and a FirstGameCompleted event containing only the game name while Marketing consent remains granted. Meta&apos;s Pixel may process browser and page information as described in Meta&apos;s own notice.</li>
             </ul>
-            <p className="mt-3">Puzzler does not send names, email addresses, typed answers, country-level attempts, country names or codes, age information, or player profiles. It does not use session replay, heatmaps, broad interaction autocapture, user identification, or Meta automatic advanced matching. Pseudonymous identifiers can still be personal data.</p>
+            <p className="mt-3">Puzzler does not send names, email addresses, typed answers, country-level attempts, country names or codes, age information, or player profiles to PostHog. It does not use session replay, heatmaps, broad interaction autocapture, user identification, or Meta automatic advanced matching. Pseudonymous identifiers can still be personal data.</p>
           </section>
 
           <section>
             <h2 className="text-lg font-black text-white">Cookies and browser storage</h2>
-            <p className="mt-2">Puzzler uses browser storage, not only traditional cookies. Necessary local storage keeps your saved Cookie settings and local game records. Those records stay on this device and are not sent to Pocket Arcade. Optional PostHog and Meta storage is not initialized until you choose its category.</p>
+            <p className="mt-2">Puzzler uses browser storage, not only traditional cookies. Necessary local storage keeps your saved Cookie settings and local game records. Those records stay on this device and are not sent to Pocket Arcade. Optional services do not load or access their browser storage until you choose the relevant category.</p>
             <ul className="mt-3 list-disc space-y-1 pl-5 text-slate-400">
               <li>Consent and local game records remain in your browser until you change your choice, clear Puzzler&apos;s site data, or your browser removes them.</li>
-              <li>Campaign attribution is removed when Analytics consent is withdrawn. A local first-completion delivery flag remains only to avoid sending duplicate conversion events.</li>
-              <li>Provider-controlled cookies or identifiers may have their own durations. See the provider privacy information linked above for their current details.</li>
+              <li>Campaign attribution and the relevant first-completion delivery flag are removed when Analytics or Marketing consent is withdrawn. The delivery flag is read only while the related optional consent is active.</li>
+              <li>Puzzler configures PostHog for memory-only operation with provider persistence disabled. Meta may set its own cookies or browser-storage identifiers after Marketing consent; see Meta&apos;s information linked below for its current details and durations.</li>
             </ul>
           </section>
 
           <section>
             <h2 className="text-lg font-black text-white">Retention and international transfers</h2>
-            <p className="mt-2">Pocket Arcade does not keep a server-side player profile or copy of game records. Optional event data is processed by the providers above under their respective service terms and retention settings. Meta&apos;s Business Tools terms state that it may retain event data for up to two years. Although Puzzler uses a PostHog EU host, provider processing or their approved subprocessors may involve transfers outside the EEA. Where applicable, those providers describe transfer safeguards in their privacy and data-processing terms.</p>
+            <p className="mt-2">Pocket Arcade does not keep a server-side player profile or copy of game records. Local records and the saved consent choice remain on the device until the player clears site data or changes the choice. PostHog event retention is controlled in Pocket Arcade&apos;s PostHog project and must be published here before launch; it cannot be derived from this website&apos;s code. Meta&apos;s Business Tools terms state that it may retain event data for up to two years.</p>
+            <p className="mt-3">Puzzler uses PostHog&apos;s EU host, but provider processing or approved subprocessors may involve transfers outside the EEA. Meta states that non-user information may be processed in the United States and other countries. The providers describe their current transfer safeguards, including standard contractual clauses where applicable, in their privacy and data-processing terms linked below.</p>
           </section>
 
           <section>
             <h2 className="text-lg font-black text-white">Your choices and rights</h2>
             <p className="mt-2">You can choose <strong className="font-black text-white">Reject non-essential</strong> when the banner appears, or use <strong className="font-black text-white">Cookie settings</strong> in the footer at any time to change or withdraw Analytics and Marketing consent. You can delete local player records and Puzzler&apos;s privacy preferences in your browser&apos;s site-data controls. For a request or question, contact Pocket Arcade using the contact route above.</p>
-            <p className="mt-3">Depending on where you live, you may also have the right to complain to your local data-protection supervisory authority. The lead authority applicable to Pocket Arcade depends on its legal establishment.</p>
+            <p className="mt-3">Depending on where you live, you may also have the right to complain to your local data-protection supervisory authority. The authority applicable to Pocket Arcade depends on the operator&apos;s legal establishment, which has not yet been published above.</p>
           </section>
 
           <section>

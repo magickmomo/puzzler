@@ -2,23 +2,31 @@ import { describe, expect, it } from "vitest";
 import {
   CAMPAIGN_STORAGE_KEY,
   FIRST_COMPLETION_STORAGE_KEY,
+  createFacebookPixelQueue,
   createAnalyticsClient,
   extractCampaignAttribution,
+  sanitizePostHogEvent,
   type AnalyticsDependencies,
+  type FacebookPixelHost,
 } from "./analytics";
 
 function createMemoryStorage() {
   const values = new Map<string, string>();
+  const reads: string[] = [];
 
   return {
-    getItem: (key: string) => values.get(key) ?? null,
+    getItem: (key: string) => {
+      reads.push(key);
+      return values.get(key) ?? null;
+    },
     setItem: (key: string, value: string) => values.set(key, value),
     removeItem: (key: string) => values.delete(key),
+    reads,
   };
 }
 
 function createTestAnalytics() {
-  const posthogCalls: Array<{ type: string; event?: string; properties?: Record<string, string | number | boolean> }> = [];
+  const posthogCalls: Array<{ type: string; event?: string; properties?: Record<string, string | number | boolean>; options?: unknown }> = [];
   const metaCalls: Array<{ type: string; game?: string }> = [];
   const storage = createMemoryStorage();
   let posthogLoads = 0;
@@ -29,7 +37,7 @@ function createTestAnalytics() {
     loadPostHog: async () => {
       posthogLoads += 1;
       return {
-        init: () => posthogCalls.push({ type: "init" }),
+        init: (_token, options) => posthogCalls.push({ type: "init", options }),
         capture: (event, properties) => posthogCalls.push({ type: "capture", event, properties }),
         opt_in_capturing: () => posthogCalls.push({ type: "opt_in" }),
         reset: () => posthogCalls.push({ type: "reset" }),
@@ -158,6 +166,55 @@ describe("analytics data minimisation", () => {
 
     expect(analytics.storage.getItem(CAMPAIGN_STORAGE_KEY)).toBe(JSON.stringify({ utm_source: "facebook" }));
   });
+
+  it("rejects arbitrary query values rather than treating them as campaign attribution", () => {
+    expect(extractCampaignAttribution("?utm_source=facebook&utm_campaign=summer%20sale&email=not-allowed")).toEqual({
+      utm_source: "facebook",
+    });
+  });
+
+  it("removes SDK-added browser data and undeclared events before PostHog delivery", async () => {
+    const analytics = createTestAnalytics();
+
+    await analytics.client.setConsent({ analytics: true, marketing: false });
+    const initCall = analytics.posthogCalls.find((call) => call.type === "init");
+    const options = initCall?.options as {
+      autocapture: boolean;
+      capture_pageview: boolean;
+      capture_performance: boolean;
+      persistence: string;
+      disable_persistence: boolean;
+      save_campaign_params: boolean;
+      save_referrer: boolean;
+      before_send: typeof sanitizePostHogEvent;
+    };
+
+    expect(options).toMatchObject({
+      autocapture: false,
+      capture_pageview: false,
+      capture_performance: false,
+      persistence: "memory",
+      disable_persistence: true,
+      save_campaign_params: false,
+      save_referrer: false,
+    });
+    expect(options.before_send({
+      event: "game_completed",
+      properties: {
+        token: "project-token",
+        game: "flag_blitz",
+        score: 10,
+        "$current_url": "https://puzzler.example/?email=not-allowed",
+        "$referrer": "https://referrer.example/?secret=no",
+        "$browser": "Browser name",
+        arbitrary: "not allowed",
+      },
+    })).toEqual({
+      event: "game_completed",
+      properties: { token: "project-token", game: "flag_blitz", score: 10 },
+    });
+    expect(options.before_send({ event: "$opt_in", properties: { token: "project-token" } })).toBeNull();
+  });
 });
 
 describe("analytics event delivery guards", () => {
@@ -165,8 +222,10 @@ describe("analytics event delivery guards", () => {
     const analytics = createTestAnalytics();
 
     await analytics.client.setConsent({ analytics: true, marketing: true });
-    await analytics.client.trackFirstGameCompleted("flag_blitz");
-    await analytics.client.trackFirstGameCompleted("capital_cities");
+    await Promise.all([
+      analytics.client.trackFirstGameCompleted("flag_blitz"),
+      analytics.client.trackFirstGameCompleted("capital_cities"),
+    ]);
 
     expect(analytics.posthogCalls.filter((call) => call.event === "first_game_completed")).toHaveLength(1);
     expect(analytics.metaCalls.filter((call) => call.type === "first_game_completed")).toHaveLength(1);
@@ -185,6 +244,29 @@ describe("analytics event delivery guards", () => {
     expect(analytics.metaCalls.filter((call) => call.type === "first_game_completed")).toHaveLength(1);
   });
 
+  it("removes each optional first-completion flag when its consent is withdrawn", async () => {
+    const analytics = createTestAnalytics();
+
+    await analytics.client.setConsent({ analytics: true, marketing: true });
+    await analytics.client.trackFirstGameCompleted("flag_blitz");
+    await analytics.client.setConsent({ analytics: false, marketing: true });
+
+    expect(analytics.storage.getItem(FIRST_COMPLETION_STORAGE_KEY)).toBe(JSON.stringify({ meta: true }));
+
+    await analytics.client.setConsent({ analytics: false, marketing: false });
+    expect(analytics.storage.getItem(FIRST_COMPLETION_STORAGE_KEY)).toBeNull();
+  });
+
+  it("does not create first-completion storage without relevant consent", async () => {
+    const analytics = createTestAnalytics();
+
+    analytics.storage.setItem(FIRST_COMPLETION_STORAGE_KEY, JSON.stringify({ posthog: true }));
+    await analytics.client.setConsent({ analytics: false, marketing: false });
+    await analytics.client.trackFirstGameCompleted("flag_blitz");
+
+    expect(analytics.storage.reads).not.toContain(FIRST_COMPLETION_STORAGE_KEY);
+  });
+
   it("does not duplicate landing or page-view events on repeated renders", async () => {
     const analytics = createTestAnalytics();
 
@@ -200,5 +282,23 @@ describe("analytics event delivery guards", () => {
 
     expect(analytics.posthogCalls.filter((call) => call.event === "ad_landing_viewed")).toHaveLength(1);
     expect(analytics.metaCalls.filter((call) => call.type === "page_view")).toHaveLength(1);
+  });
+});
+
+describe("Meta Pixel browser queue", () => {
+  it("uses Meta's standard queue aliases before the consent-gated script loads", () => {
+    const pixelHost: FacebookPixelHost = {};
+    const fbq = createFacebookPixelQueue(pixelHost);
+
+    fbq("init", "pixel-id");
+    fbq("track", "PageView");
+
+    expect(pixelHost.fbq).toBe(fbq);
+    expect(pixelHost._fbq).toBe(fbq);
+    expect(fbq.push).toBe(fbq);
+    expect(fbq.queue).toEqual([
+      ["init", "pixel-id"],
+      ["track", "PageView"],
+    ]);
   });
 });

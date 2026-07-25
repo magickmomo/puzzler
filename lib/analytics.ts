@@ -80,15 +80,34 @@ export type AnalyticsConfig = {
 
 type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
+type AnalyticsPropertyValue = string | number | boolean;
+type PostHogCapturePayload = {
+  event: string;
+  properties: Record<string, unknown>;
+};
+
+type PostHogOptions = {
+  api_host: string;
+  autocapture: false;
+  capture_pageview: false;
+  capture_performance: false;
+  disable_session_recording: true;
+  disable_external_dependency_loading: true;
+  disable_surveys: true;
+  disable_conversations: true;
+  disable_product_tours: true;
+  advanced_disable_flags: true;
+  save_campaign_params: false;
+  save_referrer: false;
+  persistence: "memory";
+  disable_persistence: true;
+  person_profiles: "never";
+  before_send: (payload: PostHogCapturePayload) => PostHogCapturePayload | null;
+};
+
 type PostHogClient = {
-  init: (token: string, options: {
-    api_host: string;
-    autocapture: false;
-    capture_pageview: false;
-    disable_session_recording: true;
-  }) => unknown;
-  capture: (event: string, properties: Record<string, string | number | boolean>) => unknown;
-  opt_in_capturing: () => void;
+  init: (token: string, options: PostHogOptions) => unknown;
+  capture: (event: string, properties: Record<string, AnalyticsPropertyValue>) => unknown;
   opt_out_capturing: () => void;
   reset: (resetDeviceId?: boolean) => void;
 };
@@ -106,10 +125,7 @@ export type AnalyticsDependencies = {
   loadMetaPixel?: (pixelId: string) => Promise<MetaClient>;
 };
 
-type CompletionDelivery = {
-  posthog: boolean;
-  meta: boolean;
-};
+type CompletionDelivery = Partial<Record<"posthog" | "meta", true>>;
 
 const CAMPAIGN_PARAMETERS = [
   "utm_source",
@@ -118,6 +134,39 @@ const CAMPAIGN_PARAMETERS = [
   "utm_content",
   "utm_term",
 ] as const;
+
+const ANALYTICS_EVENT_NAMES = [
+  "ad_landing_viewed",
+  "game_selected",
+  "game_started",
+  "game_completed",
+  "game_abandoned",
+  "replay_started",
+  "first_game_completed",
+] as const satisfies readonly AnalyticsEventName[];
+
+const ANALYTICS_EVENT_PROPERTY_KEYS = new Set<string>([
+  "game",
+  "mode",
+  "difficulty",
+  "timer_enabled",
+  "score",
+  "duration_ms",
+  "mistakes",
+  "progress",
+  "landing_path",
+  ...CAMPAIGN_PARAMETERS,
+]);
+
+// PostHog requires its project token to ingest an event. All other SDK-added
+// properties, including URLs, referrers, device details, and session IDs, are
+// removed just before delivery.
+const POSTHOG_REQUIRED_TRANSPORT_PROPERTY_KEYS = new Set(["token"]);
+const SAFE_UTM_VALUE = /^[a-zA-Z0-9._~-]{1,100}$/;
+const SAFE_LANDING_PATH = /^\/(?:[a-z0-9-]+\/)*$/;
+const ANALYTICS_GAMES = new Set<AnalyticsGame>(["flag_blitz", "capital_cities"]);
+const FLAG_BLITZ_MODES = new Set<FlagBlitzMode>(["classic", "unlimited", "speed-match", "speed-match-unlimited"]);
+const ANALYTICS_DIFFICULTIES = new Set<AnalyticsDifficulty>(["easy", "medium", "hard"]);
 
 function getBrowserStorage(): StorageLike | undefined {
   if (typeof window === "undefined") return undefined;
@@ -174,13 +223,51 @@ function toProperties(properties: Record<string, string | number | boolean | und
   return safeProperties;
 }
 
+function isAnalyticsEventName(value: string): value is AnalyticsEventName {
+  return ANALYTICS_EVENT_NAMES.includes(value as AnalyticsEventName);
+}
+
+function isSafeAnalyticsProperty(key: string, value: unknown): value is AnalyticsPropertyValue {
+  if (key === "token") return typeof value === "string";
+  if (CAMPAIGN_PARAMETERS.includes(key as (typeof CAMPAIGN_PARAMETERS)[number])) return typeof value === "string" && SAFE_UTM_VALUE.test(value);
+  if (key === "game") return typeof value === "string" && ANALYTICS_GAMES.has(value as AnalyticsGame);
+  if (key === "mode") return typeof value === "string" && FLAG_BLITZ_MODES.has(value as FlagBlitzMode);
+  if (key === "difficulty") return typeof value === "string" && ANALYTICS_DIFFICULTIES.has(value as AnalyticsDifficulty);
+  if (key === "landing_path") return typeof value === "string" && SAFE_LANDING_PATH.test(value);
+  if (key === "timer_enabled") return typeof value === "boolean";
+  if (key === "score" || key === "duration_ms" || key === "mistakes" || key === "progress") {
+    return typeof value === "number" && Number.isFinite(value) && value >= 0;
+  }
+
+  return false;
+}
+
+/**
+ * Last-mile PostHog protection. The SDK enriches events with browser data by
+ * default, so this keeps only Puzzler's declared event fields and the project
+ * token PostHog needs to accept the event.
+ */
+export function sanitizePostHogEvent(payload: PostHogCapturePayload): PostHogCapturePayload | null {
+  if (!isAnalyticsEventName(payload.event)) return null;
+
+  const properties: Record<string, AnalyticsPropertyValue> = {};
+
+  for (const [key, value] of Object.entries(payload.properties)) {
+    if (!ANALYTICS_EVENT_PROPERTY_KEYS.has(key) && !POSTHOG_REQUIRED_TRANSPORT_PROPERTY_KEYS.has(key)) continue;
+    if (!isSafeAnalyticsProperty(key, value)) continue;
+    properties[key] = value;
+  }
+
+  return { ...payload, properties };
+}
+
 export function extractCampaignAttribution(search: string): CampaignAttribution {
   const params = new URLSearchParams(search);
   const attribution: CampaignAttribution = {};
 
   for (const parameter of CAMPAIGN_PARAMETERS) {
     const value = params.get(parameter);
-    if (value) attribution[parameter] = value;
+    if (value && SAFE_UTM_VALUE.test(value)) attribution[parameter] = value;
   }
 
   return attribution;
@@ -206,7 +293,19 @@ function readCampaign(storage: StorageLike | undefined): CampaignAttribution {
 
 function readCompletionDelivery(storage: StorageLike | undefined): CompletionDelivery {
   const stored = readJson<CompletionDelivery>(storage, FIRST_COMPLETION_STORAGE_KEY);
-  return { posthog: stored?.posthog === true, meta: stored?.meta === true };
+  return {
+    ...(stored?.posthog === true ? { posthog: true } : {}),
+    ...(stored?.meta === true ? { meta: true } : {}),
+  };
+}
+
+function writeCompletionDelivery(storage: StorageLike | undefined, deliveries: CompletionDelivery): void {
+  if (!deliveries.posthog && !deliveries.meta) {
+    removeStoredValue(storage, FIRST_COMPLETION_STORAGE_KEY);
+    return;
+  }
+
+  writeJson(storage, FIRST_COMPLETION_STORAGE_KEY, deliveries);
 }
 
 async function loadBrowserPostHog(): Promise<PostHogClient> {
@@ -218,29 +317,40 @@ async function loadBrowserPostHog(): Promise<PostHogClient> {
 
 type FacebookPixelQueue = ((...arguments_: unknown[]) => void) & {
   callMethod?: (...arguments_: unknown[]) => void;
-  queue?: unknown[][];
+  queue: unknown[][];
+  push: FacebookPixelQueue;
   loaded?: boolean;
   version?: string;
 };
 
-type FacebookWindow = Window & { fbq?: FacebookPixelQueue };
+export type FacebookPixelHost = {
+  fbq?: FacebookPixelQueue;
+  _fbq?: FacebookPixelQueue;
+};
 
-function getFacebookPixel(windowObject: FacebookWindow): FacebookPixelQueue {
+/**
+ * This mirrors Meta's standard browser queue. It remains intentionally
+ * separate from script injection so the queue can be verified without
+ * contacting Meta.
+ */
+export function createFacebookPixelQueue(windowObject: FacebookPixelHost): FacebookPixelQueue {
   if (windowObject.fbq) return windowObject.fbq;
 
-  const queue = ((...arguments_: unknown[]) => {
-    if (queue.callMethod) {
-      queue.callMethod(...arguments_);
+  const fbq = ((...arguments_: unknown[]) => {
+    if (fbq.callMethod) {
+      fbq.callMethod.apply(fbq, arguments_);
       return;
     }
 
-    queue.queue?.push(arguments_);
+    fbq.queue.push(arguments_);
   }) as FacebookPixelQueue;
-  queue.queue = [];
-  queue.loaded = true;
-  queue.version = "2.0";
-  windowObject.fbq = queue;
-  return queue;
+  fbq.queue = [];
+  fbq.push = fbq;
+  fbq.loaded = true;
+  fbq.version = "2.0";
+  windowObject._fbq ??= fbq;
+  windowObject.fbq = fbq;
+  return fbq;
 }
 
 async function loadBrowserMetaPixel(pixelId: string): Promise<MetaClient> {
@@ -248,8 +358,8 @@ async function loadBrowserMetaPixel(pixelId: string): Promise<MetaClient> {
     throw new Error("Meta Pixel can only load in a browser");
   }
 
-  const pixelWindow = window as FacebookWindow;
-  const fbq = getFacebookPixel(pixelWindow);
+  const pixelWindow = window as Window & FacebookPixelHost;
+  const fbq = createFacebookPixelQueue(pixelWindow);
   fbq("init", pixelId);
 
   const existingScript = document.getElementById("puzzler-meta-pixel") as HTMLScriptElement | null;
@@ -281,6 +391,7 @@ export function createAnalyticsClient(
   let metaPixel: MetaClient | null = null;
   let posthogPromise: Promise<PostHogClient | null> | null = null;
   let metaPixelPromise: Promise<MetaClient | null> | null = null;
+  let firstCompletionPromise: Promise<void> | null = null;
   let lastAdLandingSignature: string | null = null;
   let lastMetaPagePath: string | null = null;
 
@@ -304,9 +415,20 @@ export function createAnalyticsClient(
           api_host: config.posthogHost!,
           autocapture: false,
           capture_pageview: false,
+          capture_performance: false,
           disable_session_recording: true,
+          disable_external_dependency_loading: true,
+          disable_surveys: true,
+          disable_conversations: true,
+          disable_product_tours: true,
+          advanced_disable_flags: true,
+          save_campaign_params: false,
+          save_referrer: false,
+          persistence: "memory",
+          disable_persistence: true,
+          person_profiles: "never",
+          before_send: sanitizePostHogEvent,
         });
-        client.opt_in_capturing();
         posthog = client;
         return client;
       })
@@ -362,25 +484,39 @@ export function createAnalyticsClient(
   }
 
   async function trackFirstGameCompleted(game: AnalyticsGame): Promise<void> {
-    const deliveries = readCompletionDelivery(storage);
+    if (!posthogAllowed() && !metaAllowed()) return;
 
-    if (posthogAllowed() && !deliveries.posthog) {
-      const client = await ensurePostHog();
-      if (client && posthogAllowed() && client === posthog) {
-        client.capture("first_game_completed", { game });
-        deliveries.posthog = true;
+    if (firstCompletionPromise) return firstCompletionPromise;
+
+    const deliverFirstCompletion = async () => {
+      const deliveries = readCompletionDelivery(storage);
+
+      if (posthogAllowed() && !deliveries.posthog) {
+        const client = await ensurePostHog();
+        if (client && posthogAllowed() && client === posthog) {
+          client.capture("first_game_completed", { game });
+          deliveries.posthog = true;
+        }
       }
-    }
 
-    if (metaAllowed() && !deliveries.meta) {
-      const client = await ensureMetaPixel();
-      if (client && metaAllowed() && client === metaPixel) {
-        client.firstGameCompleted(game);
-        deliveries.meta = true;
+      if (metaAllowed() && !deliveries.meta) {
+        const client = await ensureMetaPixel();
+        if (client && metaAllowed() && client === metaPixel) {
+          client.firstGameCompleted(game);
+          deliveries.meta = true;
+        }
       }
-    }
 
-    if (deliveries.posthog || deliveries.meta) writeJson(storage, FIRST_COMPLETION_STORAGE_KEY, deliveries);
+      if (!posthogAllowed()) delete deliveries.posthog;
+      if (!metaAllowed()) delete deliveries.meta;
+      writeCompletionDelivery(storage, deliveries);
+    };
+
+    firstCompletionPromise = deliverFirstCompletion().finally(() => {
+      firstCompletionPromise = null;
+    });
+
+    return firstCompletionPromise;
   }
 
   return {
@@ -391,6 +527,11 @@ export function createAnalyticsClient(
 
       if (!nextConsent.analytics) {
         removeStoredValue(storage, CAMPAIGN_STORAGE_KEY);
+        if (analyticsWasEnabled) {
+          const deliveries = readCompletionDelivery(storage);
+          delete deliveries.posthog;
+          writeCompletionDelivery(storage, deliveries);
+        }
         if (posthog) {
           posthog.reset(true);
           posthog.opt_out_capturing();
@@ -401,6 +542,11 @@ export function createAnalyticsClient(
       }
 
       if (!nextConsent.marketing) {
+        if (marketingWasEnabled) {
+          const deliveries = readCompletionDelivery(storage);
+          delete deliveries.meta;
+          writeCompletionDelivery(storage, deliveries);
+        }
         if (metaPixel) metaPixel.revoke();
         lastMetaPagePath = null;
       } else if (!marketingWasEnabled) {

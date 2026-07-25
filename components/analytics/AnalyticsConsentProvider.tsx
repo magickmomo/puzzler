@@ -16,6 +16,7 @@ type ConsentContextValue = {
   openCookieSettings: () => void;
   analyticsReady: boolean;
   analyticsConsentGranted: boolean;
+  consentResolved: boolean;
 };
 
 const ConsentContext = createContext<ConsentContextValue | null>(null);
@@ -72,12 +73,56 @@ function ConsentDialog({
   showClose: boolean;
 }) {
   const [preferences, setPreferences] = useState(initialPreferences);
+  const dialogRef = useRef<HTMLElement>(null);
 
   useEffect(() => setPreferences(initialPreferences), [initialPreferences]);
 
+  useEffect(() => {
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+    const focusDialog = window.setTimeout(() => {
+      dialogRef.current?.focus();
+    }, 0);
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        if (showClose) onClose();
+        else onReject();
+        return;
+      }
+
+      if (event.key !== "Tab" || !dialogRef.current) return;
+
+      const focusableElements = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      )).filter((element) => !element.hasAttribute("disabled"));
+      if (focusableElements.length === 0) return;
+
+      const first = focusableElements[0];
+      const last = focusableElements[focusableElements.length - 1];
+      const activeElement = document.activeElement;
+
+      if (event.shiftKey && (activeElement === first || activeElement === dialogRef.current)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown, true);
+    return () => {
+      window.clearTimeout(focusDialog);
+      document.removeEventListener("keydown", handleKeyDown, true);
+      previouslyFocused?.focus();
+    };
+  }, [onClose, onReject, showClose]);
+
   return (
     <div className="fixed inset-0 z-50 flex items-end bg-slate-950/80 p-3 backdrop-blur-sm sm:items-center sm:justify-center sm:p-6">
-      <section role="dialog" aria-modal="true" aria-labelledby="cookie-settings-title" className="w-full rounded-3xl border border-slate-700 bg-slate-950 p-5 shadow-2xl sm:max-w-lg sm:p-7">
+      <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="cookie-settings-title" aria-describedby="cookie-settings-description" tabIndex={-1} className="w-full rounded-3xl border border-slate-700 bg-slate-950 p-5 shadow-2xl focus:outline-none sm:max-w-lg sm:p-7">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Privacy choices</p>
@@ -87,7 +132,7 @@ function ConsentDialog({
             <button type="button" onClick={onClose} className="grid h-12 w-12 shrink-0 place-items-center rounded-xl text-xl text-slate-400 transition hover:bg-slate-900 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300" aria-label="Close cookie settings">×</button>
           )}
         </div>
-        <p className="mt-3 text-sm leading-6 text-slate-300">Necessary storage keeps this choice and your local game records. Optional analytics helps Pocket Arcade improve Puzzler; optional marketing measures ads. You can change your mind at any time.</p>
+        <p id="cookie-settings-description" className="mt-3 text-sm leading-6 text-slate-300">Necessary storage keeps this choice and your local game records. Optional analytics helps Pocket Arcade improve Puzzler; optional marketing measures ads. You can change your mind at any time.</p>
 
         <ConsentChoices preferences={preferences} onChange={setPreferences} />
 
@@ -177,14 +222,19 @@ export function AnalyticsConsentProvider({ children }: { children: ReactNode }) 
     openCookieSettings,
     analyticsReady,
     analyticsConsentGranted: consent?.analytics === true,
-  }), [analyticsReady, consent?.analytics, openCookieSettings]);
+    consentResolved: consent !== null,
+  }), [analyticsReady, consent, openCookieSettings]);
+
+  const dialogIsOpen = loaded && (!consent || settingsOpen);
 
   return (
     <ConsentContext.Provider value={contextValue}>
       <ConsentRouteTracker consent={consent} analyticsReady={analyticsReady} />
-      {children}
-      <CookieSettingsFooter onOpen={openCookieSettings} />
-      {loaded && (!consent || settingsOpen) && (
+      <div aria-hidden={dialogIsOpen || undefined} inert={dialogIsOpen}>
+        {children}
+        <CookieSettingsFooter onOpen={openCookieSettings} />
+      </div>
+      {dialogIsOpen && (
         <ConsentDialog
           initialPreferences={consent ?? { analytics: false, marketing: false }}
           onSave={saveConsent}
