@@ -11,6 +11,14 @@ import {
 } from "@/lib/capital-match";
 import { formatSeconds } from "@/lib/player-records";
 import { usePuzzlerStore } from "@/lib/puzzler-store";
+import {
+  trackFirstGameCompletion,
+  trackGameAbandoned,
+  trackGameCompleted,
+  trackGameStarted,
+  trackReplayStarted,
+} from "@/lib/analytics";
+import { useCookieSettings } from "@/components/analytics/AnalyticsConsentProvider";
 
 type RoundState = "playing" | "complete";
 type ResolvingPair = {
@@ -25,6 +33,7 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
   const recordPlay = usePuzzlerStore((state) => state.recordCapitalCitiesPlay);
   const recordResult = usePuzzlerStore((state) => state.recordCapitalCitiesResult);
   const bestTimeMs = usePuzzlerStore((state) => state.capitalCities.bestTimeMs);
+  const { analyticsConsentGranted, analyticsReady } = useCookieSettings();
   const [board, setBoard] = useState(() => createCapitalMatchBoard());
   const [roundState, setRoundState] = useState<RoundState>("playing");
   const [selectedCountryCode, setSelectedCountryCode] = useState<string | null>(null);
@@ -36,6 +45,10 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
   const startedAtRef = useRef(Date.now());
   const resolutionTimerRef = useRef<number | null>(null);
   const initialRunRecordedRef = useRef(false);
+  const initialGameStartedTrackedRef = useRef(false);
+  const activeRunRef = useRef(false);
+  const mistakesRef = useRef(0);
+  const matchedCodesRef = useRef<string[]>([]);
 
   function clearResolutionTimer() {
     if (resolutionTimerRef.current !== null) {
@@ -47,11 +60,19 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
   useEffect(() => {
     if (!initialRunRecordedRef.current) {
       recordPlay();
+      activeRunRef.current = true;
       initialRunRecordedRef.current = true;
     }
 
     return () => clearResolutionTimer();
   }, [recordPlay]);
+
+  useEffect(() => {
+    if (!analyticsReady || !analyticsConsentGranted || initialGameStartedTrackedRef.current) return;
+
+    initialGameStartedTrackedRef.current = true;
+    void trackGameStarted({ game: "capital_cities" });
+  }, [analyticsConsentGranted, analyticsReady]);
 
   useEffect(() => {
     if (roundState !== "playing") return;
@@ -63,9 +84,12 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
     return () => window.clearInterval(timer);
   }, [mistakes, roundState]);
 
-  function startRun() {
+  function startRun(isReplay = false) {
     clearResolutionTimer();
     startedAtRef.current = Date.now();
+    activeRunRef.current = true;
+    mistakesRef.current = 0;
+    matchedCodesRef.current = [];
     setBoard(createCapitalMatchBoard());
     setRoundState("playing");
     setSelectedCountryCode(null);
@@ -75,6 +99,23 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
     setMistakes(0);
     setElapsedMs(0);
     recordPlay();
+    if (isReplay) void trackReplayStarted({ game: "capital_cities" });
+    void trackGameStarted({ game: "capital_cities" });
+  }
+
+  function abandonRun() {
+    if (activeRunRef.current) {
+      activeRunRef.current = false;
+      void trackGameAbandoned({
+        game: "capital_cities",
+        duration_ms: getCapitalMatchElapsedMs(startedAtRef.current, mistakesRef.current),
+        mistakes: mistakesRef.current,
+        progress: matchedCodesRef.current.length,
+      });
+    }
+
+    clearResolutionTimer();
+    onBack();
   }
 
   function resolvePair(countryCode: string, capitalCode: string) {
@@ -82,19 +123,32 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
     setResolvingPair({ countryCode, capitalCode, correct });
 
     if (!correct) {
-      setMistakes((current) => current + 1);
+      mistakesRef.current += 1;
+      setMistakes(mistakesRef.current);
     }
 
     resolutionTimerRef.current = window.setTimeout(() => {
       if (correct) {
         const nextMatchedCodes = [...matchedCodes, countryCode];
+        matchedCodesRef.current = nextMatchedCodes;
         setMatchedCodes(nextMatchedCodes);
 
         if (nextMatchedCodes.length === board.pairs.length) {
-          const finalElapsedMs = getCapitalMatchElapsedMs(startedAtRef.current, mistakes);
+          const finalElapsedMs = getCapitalMatchElapsedMs(startedAtRef.current, mistakesRef.current);
           setElapsedMs(finalElapsedMs);
           setRoundState("complete");
           recordResult(finalElapsedMs);
+          if (activeRunRef.current) {
+            activeRunRef.current = false;
+            void trackGameCompleted({
+              game: "capital_cities",
+              score: board.pairs.length,
+              duration_ms: finalElapsedMs,
+              mistakes: mistakesRef.current,
+              progress: board.pairs.length,
+            });
+            void trackFirstGameCompletion("capital_cities");
+          }
         }
       }
 
@@ -149,7 +203,7 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
     return (
       <main className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col px-5 pb-10 pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-8">
         <header className="flex min-h-14 items-center justify-between gap-3">
-          <button type="button" onClick={onBack} className="flex min-h-12 items-center gap-2 rounded-xl px-2 text-sm font-bold text-slate-400 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300">
+          <button type="button" onClick={abandonRun} className="flex min-h-12 items-center gap-2 rounded-xl px-2 text-sm font-bold text-slate-400 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300">
             <span aria-hidden="true">←</span> Back to Hub
           </button>
           <p className="text-base font-black tracking-tight text-white">Match Capital Cities</p>
@@ -176,8 +230,8 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
           <p className="mt-2 text-xs font-semibold text-slate-600">Each incorrect pair adds 2 seconds.</p>
 
           <div className="mx-auto mt-8 w-full max-w-sm space-y-3">
-            <button type="button" onClick={startRun} className="min-h-14 w-full rounded-2xl bg-violet-300 px-5 font-black text-slate-950 transition hover:bg-violet-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-100 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">Play again</button>
-            <button type="button" onClick={onBack} className="min-h-14 w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 font-black text-white transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400">Back to Hub</button>
+            <button type="button" onClick={() => startRun(true)} className="min-h-14 w-full rounded-2xl bg-violet-300 px-5 font-black text-slate-950 transition hover:bg-violet-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-100 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">Play again</button>
+            <button type="button" onClick={abandonRun} className="min-h-14 w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 font-black text-white transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400">Back to Hub</button>
           </div>
         </section>
       </main>
@@ -187,7 +241,7 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
   return (
     <main className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-8">
       <header className="flex min-h-14 items-center justify-between gap-3">
-        <button type="button" onClick={onBack} className="flex min-h-12 items-center gap-2 rounded-xl px-2 text-sm font-bold text-slate-400 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300">
+        <button type="button" onClick={abandonRun} className="flex min-h-12 items-center gap-2 rounded-xl px-2 text-sm font-bold text-slate-400 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300">
           <span aria-hidden="true">←</span> Back to Hub
         </button>
         <p className="text-center text-base font-black tracking-tight text-white">Match Capital Cities</p>

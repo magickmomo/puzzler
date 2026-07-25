@@ -8,6 +8,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: readonly ChangelogEntry[] = [
   {
+    date: "July 25, 2026",
+    title: "Privacy choices for Puzzler",
+    summary: "Optional analytics and ad measurement now with explicit consent.",
+    highlights: [
+      "Choose Analytics and Marketing separately, reject non-essential tracking, or change your choices later from Cookie settings.",
+      "Game records still stay in this browser; Puzzler does not send typed answers or country-level attempts to its optional measurement tools.",
+      "A new Privacy page explains the current data choices.",
+    ],
+  },
+  {
     date: "July 24, 2026",
     title: "Direct links for every game",
     summary: "Each live game now has its own shareable page.",
