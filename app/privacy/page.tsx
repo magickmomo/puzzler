@@ -64,10 +64,10 @@ export default function PrivacyPage() {
 
           <section>
             <h2 className="text-lg font-black text-white">What optional measurement can collect</h2>
-            <p className="mt-2">When Analytics is accepted, PostHog receives only explicit page, game, campaign, and Web Vitals events, their path without a query string, allowlisted UTM campaign parameters, and an ephemeral pseudonymous visitor ID needed to ingest the event. Puzzler only retains campaign parameters after Analytics consent.</p>
+            <p className="mt-2">When Analytics is accepted, PostHog receives only explicit page, game, campaign, and Web Vitals events, a sanitised origin and route path without a query string or fragment, allowlisted UTM campaign parameters, and an ephemeral pseudonymous visitor ID needed to ingest the event. Puzzler only retains campaign parameters after Analytics consent.</p>
             <ul className="mt-3 list-disc space-y-1 pl-5 text-slate-400">
-              <li>PostHog receives route paths, selected game, game mode, difficulty, timer setting, aggregate score, duration, mistakes, progress, permitted campaign attribution, its project token, and the ephemeral visitor ID.</li>
-              <li>PostHog also receives only the numeric LCP, CLS, FCP, and INP Web Vitals values. It does not receive full URLs, referrers, device data, browser data, session IDs, Web Vitals attribution, network timing, or screen recordings from Puzzler.</li>
+              <li>PostHog receives a sanitised origin and route path for page and per-page performance reporting, selected game, game mode, difficulty, timer setting, aggregate score, duration, mistakes, progress, permitted campaign attribution, its project token, and the ephemeral visitor ID.</li>
+              <li>PostHog also receives only the numeric LCP, CLS, FCP, and INP Web Vitals values. It does not receive raw full URLs, query strings, fragments, referrers, device data, browser data, session IDs, Web Vitals attribution, network timing, or screen recordings from Puzzler.</li>
               <li>Meta receives PageView events and a FirstGameCompleted event containing only the game name while Marketing consent remains granted. Meta&apos;s Pixel may process browser and page information as described in Meta&apos;s own notice.</li>
             </ul>
             <p className="mt-3">Puzzler does not send names, email addresses, typed answers, country-level attempts, country names or codes, age information, or player profiles to PostHog. It does not use session replay, heatmaps, broad interaction autocapture, user identification, or Meta automatic advanced matching. Pseudonymous identifiers can still be personal data.</p>

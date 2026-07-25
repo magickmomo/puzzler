@@ -14,6 +14,7 @@ export const CHANGELOG_ENTRIES: readonly ChangelogEntry[] = [
     highlights: [
       "Choose Analytics and Marketing separately, reject non-essential tracking, or change your choices later from Cookie settings.",
       "Game records still stay in this browser; Puzzler does not send typed answers or country-level attempts to its optional measurement tools.",
+      "Analytics now uses privacy-safe page and Web Vitals reporting: no query strings, fragments, referrers, device, browser, or session data are sent.",
       "A new Privacy page explains the current data choices.",
     ],
   },

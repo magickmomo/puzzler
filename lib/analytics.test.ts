@@ -34,6 +34,7 @@ function createTestAnalytics() {
 
   const dependencies: AnalyticsDependencies = {
     storage,
+    getPageOrigin: () => "https://puzzler.example",
     loadPostHog: async () => {
       posthogLoads += 1;
       return {
@@ -189,6 +190,7 @@ describe("analytics data minimisation", () => {
       };
       persistence: string;
       disable_persistence: boolean;
+      disable_external_dependency_loading: boolean;
       save_campaign_params: boolean;
       save_referrer: boolean;
       before_send: typeof sanitizePostHogEvent;
@@ -205,6 +207,7 @@ describe("analytics data minimisation", () => {
       },
       persistence: "memory",
       disable_persistence: true,
+      disable_external_dependency_loading: true,
       save_campaign_params: false,
       save_referrer: false,
     });
@@ -257,7 +260,7 @@ describe("analytics data minimisation", () => {
     })?.properties.landing_path).toBe("/capital-cities");
   });
 
-  it("rejects invalid anonymous transport values", () => {
+  it("fails closed when any required anonymous transport value is invalid", () => {
     expect(sanitizePostHogEvent({
       event: "game_selected",
       properties: {
@@ -266,13 +269,20 @@ describe("analytics data minimisation", () => {
         "$process_person_profile": true,
         game: "flag_blitz",
       },
-    })).toEqual({
+    })).toBeNull();
+
+    expect(sanitizePostHogEvent({
       event: "game_selected",
-      properties: { token: "project-token", game: "flag_blitz" },
-    });
+      properties: {
+        token: "   ",
+        distinct_id: "anonymous-id",
+        "$process_person_profile": false,
+        game: "flag_blitz",
+      },
+    })).toBeNull();
   });
 
-  it("keeps only the four numeric Web Vitals alongside anonymous transport fields", () => {
+  it("keeps only numeric Web Vitals and a sanitised page URL alongside anonymous transport fields", () => {
     expect(sanitizePostHogEvent({
       event: "$web_vitals",
       properties: {
@@ -283,8 +293,7 @@ describe("analytics data minimisation", () => {
         "$web_vitals_CLS_value": 0.04,
         "$web_vitals_FCP_value": 900,
         "$web_vitals_INP_value": 120,
-        "$web_vitals_LCP_event": { $current_url: "https://puzzler.example/?email=not-allowed" },
-        "$current_url": "https://puzzler.example/?email=not-allowed",
+        "$web_vitals_LCP_event": { $current_url: "https://puzzler.example/flag-blitz?email=not-allowed#results" },
         "$session_id": "session-id",
       },
     })).toEqual({
@@ -297,6 +306,29 @@ describe("analytics data minimisation", () => {
         "$web_vitals_CLS_value": 0.04,
         "$web_vitals_FCP_value": 900,
         "$web_vitals_INP_value": 120,
+        "$current_url": "https://puzzler.example/flag-blitz",
+      },
+    });
+  });
+
+  it("keeps the reserved pageview event with only a sanitised origin and path", () => {
+    expect(sanitizePostHogEvent({
+      event: "$pageview",
+      properties: {
+        token: "project-token",
+        distinct_id: "anonymous-id",
+        "$process_person_profile": false,
+        "$current_url": "https://puzzler.example/capital-cities?utm_campaign=ad#game",
+        "$referrer": "https://referrer.example/?secret=no",
+        "page_path": "/capital-cities",
+      },
+    })).toEqual({
+      event: "$pageview",
+      properties: {
+        token: "project-token",
+        distinct_id: "anonymous-id",
+        "$process_person_profile": false,
+        "$current_url": "https://puzzler.example/capital-cities",
       },
     });
   });
@@ -370,7 +402,13 @@ describe("analytics event delivery guards", () => {
     ]);
 
     expect(analytics.posthogCalls.filter((call) => call.event === "ad_landing_viewed")).toHaveLength(1);
-    expect(analytics.posthogCalls.filter((call) => call.event === "page_view")).toHaveLength(1);
+    expect(analytics.posthogCalls.filter((call) => call.event === "$pageview")).toEqual([
+      {
+        type: "capture",
+        event: "$pageview",
+        properties: { $current_url: "https://puzzler.example/flag-blitz" },
+      },
+    ]);
     expect(analytics.metaCalls.filter((call) => call.type === "page_view")).toHaveLength(1);
   });
 });
