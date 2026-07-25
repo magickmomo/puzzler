@@ -33,8 +33,10 @@ export default function PrivacyPage() {
         <div className="mt-8 space-y-8 text-sm leading-7 text-slate-300">
           <section>
             <h2 className="text-lg font-black text-white">Who runs Puzzler</h2>
-            <p className="mt-2">Puzzler is a personal project operated under the Pocket Arcade name. For privacy questions or to exercise a privacy right, contact the Pocket Arcade Facebook Page, currently identified by Page ID 1277338905453734.</p>
-            <p className="mt-3 text-slate-400">The individual operator&apos;s legal name, establishment country, and postal contact are not published on this site. Those details are needed to identify a specific data controller and the applicable supervisory authority, and will be added before this notice is relied on as a launch-ready privacy notice.</p>
+            <p className="mt-2">Puzzler is a personal project operated by M. Amer in the United Kingdom under the Pocket Arcade name.</p>
+            <p className="mt-3">M. Amer is the data controller for the optional analytics and advertising measurement described in this privacy notice.</p>
+            <p className="mt-3">For privacy questions or requests, contact <a href="mailto:browse-emporia-4v@icloud.com" className="font-bold text-cyan-300 underline underline-offset-2 hover:text-cyan-100">browse-emporia-4v@icloud.com</a>.</p>
+            <p className="mt-3 text-slate-400">You also have the right to complain to the UK Information Commissioner&apos;s Office (ICO). Information about making a complaint is available at <a href="https://ico.org.uk/make-a-complaint/" target="_blank" rel="noreferrer" className="font-bold text-cyan-300 underline underline-offset-2 hover:text-cyan-100">ico.org.uk/make-a-complaint</a>.</p>
           </section>
 
           <section>
@@ -85,19 +87,19 @@ export default function PrivacyPage() {
 
           <section>
             <h2 className="text-lg font-black text-white">Retention and international transfers</h2>
-            <p className="mt-2">Pocket Arcade does not keep a server-side player profile or copy of game records. Local records and the saved consent choice remain on the device until the player clears site data or changes the choice. PostHog event retention is controlled in Pocket Arcade&apos;s PostHog project and must be published here before launch; it cannot be derived from this website&apos;s code. Meta&apos;s Business Tools terms state that it may retain event data for up to two years.</p>
+            <p className="mt-2">Pocket Arcade does not keep a server-side player profile or copy of game records. Local records and the saved consent choice remain on the device until the player clears site data or changes the choice. PostHog analytics and Web Vitals events are retained for one year within Pocket Arcade&apos;s PostHog project before automatic deletion. Meta&apos;s Business Tools terms state that it may retain event data for up to two years.</p>
             <p className="mt-3">Puzzler uses PostHog&apos;s EU host, but provider processing or approved subprocessors may involve transfers outside the EEA. Meta states that non-user information may be processed in the United States and other countries. The providers describe their current transfer safeguards, including standard contractual clauses where applicable, in their privacy and data-processing terms linked below.</p>
           </section>
 
           <section>
             <h2 className="text-lg font-black text-white">Your choices and rights</h2>
-            <p className="mt-2">You can choose <strong className="font-black text-white">Reject non-essential</strong> when the banner appears, or use <strong className="font-black text-white">Cookie settings</strong> in the footer at any time to change or withdraw Analytics and Marketing consent. You can delete local player records and Puzzler&apos;s privacy preferences in your browser&apos;s site-data controls. For a request or question, contact Pocket Arcade using the contact route above.</p>
-            <p className="mt-3">Depending on where you live, you may also have the right to complain to your local data-protection supervisory authority. The authority applicable to Pocket Arcade depends on the operator&apos;s legal establishment, which has not yet been published above.</p>
+            <p className="mt-2">You can choose <strong className="font-black text-white">Reject non-essential</strong> when the banner appears, or use <strong className="font-black text-white">Cookie settings</strong> in the footer at any time to change or withdraw Analytics and Marketing consent. You can delete local player records and Puzzler&apos;s privacy preferences in your browser&apos;s site-data controls. For a request or question, contact M. Amer at <a href="mailto:browse-emporia-4v@icloud.com" className="font-bold text-cyan-300 underline underline-offset-2 hover:text-cyan-100">browse-emporia-4v@icloud.com</a>.</p>
+            <p className="mt-3">You may also complain to the UK Information Commissioner&apos;s Office (ICO). Details are available at <a href="https://ico.org.uk/make-a-complaint/" target="_blank" rel="noreferrer" className="font-bold text-cyan-300 underline underline-offset-2 hover:text-cyan-100">ico.org.uk/make-a-complaint</a>.</p>
           </section>
 
           <section>
             <h2 className="text-lg font-black text-white">Younger players</h2>
-            <p className="mt-2">Puzzler is designed to avoid unnecessary identifiers and profiling. We do not knowingly collect age, names, or email addresses, and do not use session replay. If you are a parent or guardian with a question about a child&apos;s use of Puzzler, please contact Pocket Arcade.</p>
+            <p className="mt-2">Puzzler is designed to avoid unnecessary identifiers and profiling. We do not knowingly collect age, names, or email addresses, and do not use session replay. If you are a parent or guardian with a question about a child&apos;s use of Puzzler, please contact <a href="mailto:browse-emporia-4v@icloud.com" className="font-bold text-cyan-300 underline underline-offset-2 hover:text-cyan-100">browse-emporia-4v@icloud.com</a>.</p>
           </section>
 
           <section className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">

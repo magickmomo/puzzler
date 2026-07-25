@@ -26,18 +26,21 @@ function ConsentChoice({
   title,
   description,
   checked,
+  disabled = false,
   onCheckedChange,
 }: {
   title: string;
   description: string;
   checked: boolean;
+  disabled?: boolean;
   onCheckedChange: (checked: boolean) => void;
 }) {
   return (
-    <label className={`flex min-h-14 cursor-pointer items-center justify-between gap-4 rounded-2xl border px-4 py-3 transition focus-within:ring-2 focus-within:ring-cyan-300 ${checked ? "border-cyan-300/70 bg-cyan-300/10" : "border-slate-700 bg-slate-900 hover:border-cyan-300/50"}`}>
+    <label className={`flex min-h-14 items-center justify-between gap-4 rounded-2xl border px-4 py-3 transition focus-within:ring-2 focus-within:ring-cyan-300 ${disabled ? "cursor-default" : "cursor-pointer"} ${checked ? "border-cyan-300/70 bg-cyan-300/10" : "border-slate-700 bg-slate-900 hover:border-cyan-300/50"}`}>
       <input
         type="checkbox"
         checked={checked}
+        disabled={disabled}
         onChange={(event) => onCheckedChange(event.target.checked)}
         className="peer sr-only"
       />
@@ -56,9 +59,11 @@ function ConsentChoice({
 
 function ConsentChoices({
   preferences,
+  disabled,
   onChange,
 }: {
   preferences: ConsentPreferences;
+  disabled?: boolean;
   onChange: (preferences: ConsentPreferences) => void;
 }) {
   return (
@@ -68,12 +73,14 @@ function ConsentChoices({
         title="Analytics"
         description="Help us understand which games and features are working well."
         checked={preferences.analytics}
+        disabled={disabled}
         onCheckedChange={(analytics) => onChange({ ...preferences, analytics })}
       />
       <ConsentChoice
         title="Marketing"
         description="Help us measure whether our ads are reaching the right players."
         checked={preferences.marketing}
+        disabled={disabled}
         onCheckedChange={(marketing) => onChange({ ...preferences, marketing })}
       />
     </fieldset>
@@ -94,9 +101,20 @@ function ConsentDialog({
   showClose: boolean;
 }) {
   const [preferences, setPreferences] = useState(initialPreferences);
+  const [isAcceptingAll, setIsAcceptingAll] = useState(false);
   const dialogRef = useRef<HTMLElement>(null);
 
   useEffect(() => setPreferences(initialPreferences), [initialPreferences]);
+
+  useEffect(() => {
+    if (!isAcceptingAll) return;
+
+    const confirmationTimer = window.setTimeout(() => {
+      onSave({ analytics: true, marketing: true });
+    }, 450);
+
+    return () => window.clearTimeout(confirmationTimer);
+  }, [isAcceptingAll, onSave]);
 
   useEffect(() => {
     const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -108,6 +126,7 @@ function ConsentDialog({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
+        if (isAcceptingAll) return;
         if (showClose) onClose();
         else onReject();
         return;
@@ -139,7 +158,13 @@ function ConsentDialog({
       document.removeEventListener("keydown", handleKeyDown, true);
       previouslyFocused?.focus();
     };
-  }, [onClose, onReject, showClose]);
+  }, [isAcceptingAll, onClose, onReject, showClose]);
+
+  const acceptAll = () => {
+    if (isAcceptingAll) return;
+    setPreferences({ analytics: true, marketing: true });
+    setIsAcceptingAll(true);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-end bg-slate-950/80 p-3 backdrop-blur-sm sm:items-center sm:justify-center sm:p-6">
@@ -150,19 +175,19 @@ function ConsentDialog({
             <h2 id="cookie-settings-title" className="mt-1 text-2xl font-black tracking-tight text-white">Your cookie settings</h2>
           </div>
           {showClose && (
-            <button type="button" onClick={onClose} className="grid h-12 w-12 shrink-0 place-items-center rounded-xl text-xl text-slate-400 transition hover:bg-slate-900 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300" aria-label="Close cookie settings">×</button>
+            <button type="button" disabled={isAcceptingAll} onClick={onClose} className="grid h-12 w-12 shrink-0 place-items-center rounded-xl text-xl text-slate-400 transition hover:bg-slate-900 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:cursor-default disabled:opacity-50" aria-label="Close cookie settings">×</button>
           )}
         </div>
         <p id="cookie-settings-description" className="mt-3 text-sm leading-6 text-slate-300">Necessary storage keeps this choice and your local game records. Optional analytics helps Pocket Arcade improve Puzzler; optional marketing measures ads. You can change your mind at any time.</p>
 
-        <ConsentChoices preferences={preferences} onChange={setPreferences} />
+        <ConsentChoices preferences={preferences} disabled={isAcceptingAll} onChange={setPreferences} />
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
-          <button type="button" onClick={() => onSave({ analytics: true, marketing: true })} className="min-h-12 rounded-xl border border-slate-600 bg-slate-900 px-4 text-sm font-black text-white transition hover:border-slate-400 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">Accept all &amp; continue</button>
-          <button type="button" onClick={onReject} className="min-h-12 rounded-xl border border-slate-600 bg-slate-900 px-4 text-sm font-black text-white transition hover:border-slate-400 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">Reject non-essential</button>
+          <button type="button" disabled={isAcceptingAll} onClick={acceptAll} className="min-h-12 rounded-xl border border-slate-600 bg-slate-900 px-4 text-sm font-black text-white transition hover:border-slate-400 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:cursor-default disabled:border-cyan-300 disabled:bg-cyan-300 disabled:text-slate-950">{isAcceptingAll ? "Saved ✓" : "Accept all & continue"}</button>
+          <button type="button" disabled={isAcceptingAll} onClick={onReject} className="min-h-12 rounded-xl border border-slate-600 bg-slate-900 px-4 text-sm font-black text-white transition hover:border-slate-400 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:cursor-default disabled:opacity-50">Reject non-essential</button>
         </div>
-        <button type="button" onClick={() => onSave(preferences)} className="mt-3 min-h-12 w-full rounded-xl border border-slate-700 px-4 text-sm font-black text-slate-200 transition hover:border-cyan-300/60 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">Save preferences</button>
-        <p className="mt-4 text-center text-xs leading-5 text-slate-500"><Link href="/privacy" className="font-bold text-cyan-300 underline underline-offset-2 hover:text-cyan-100">Read the privacy notice</Link></p>
+        <button type="button" disabled={isAcceptingAll} onClick={() => onSave(preferences)} className="mt-3 min-h-12 w-full rounded-xl border border-slate-700 px-4 text-sm font-black text-slate-200 transition hover:border-cyan-300/60 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:cursor-default disabled:opacity-50">Save preferences</button>
+        <p className="mt-4 text-center text-xs leading-5 text-slate-500"><Link href="/privacy" target="_blank" rel="noreferrer" className="font-bold text-cyan-300 underline underline-offset-2 hover:text-cyan-100">Read the privacy notice</Link></p>
       </section>
     </div>
   );
@@ -211,6 +236,7 @@ function ConsentRouteTracker({ consent, analyticsReady }: { consent: ConsentPref
 }
 
 export function AnalyticsConsentProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
   const [consent, setConsent] = useState<ConsentPreferences | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -249,7 +275,9 @@ export function AnalyticsConsentProvider({ children }: { children: ReactNode }) 
     consentResolved: consent !== null,
   }), [analyticsReady, consent, openCookieSettings]);
 
-  const dialogIsOpen = loaded && (!consent || settingsOpen);
+  // The notice must remain readable before a visitor makes a choice. An
+  // automatic dialog would otherwise cover the privacy page opened from it.
+  const dialogIsOpen = loaded && (settingsOpen || (!consent && pathname !== "/privacy"));
 
   return (
     <ConsentContext.Provider value={contextValue}>
