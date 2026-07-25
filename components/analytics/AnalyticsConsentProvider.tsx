@@ -22,6 +22,38 @@ type ConsentContextValue = {
 
 const ConsentContext = createContext<ConsentContextValue | null>(null);
 
+function ConsentChoice({
+  title,
+  description,
+  checked,
+  onCheckedChange,
+}: {
+  title: string;
+  description: string;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className={`flex min-h-14 cursor-pointer items-center justify-between gap-4 rounded-2xl border px-4 py-3 transition focus-within:ring-2 focus-within:ring-cyan-300 ${checked ? "border-cyan-300/70 bg-cyan-300/10" : "border-slate-700 bg-slate-900 hover:border-cyan-300/50"}`}>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onCheckedChange(event.target.checked)}
+        className="peer sr-only"
+      />
+      <span>
+        <span className="block text-sm font-black text-white">{title}</span>
+        <span className="mt-0.5 block text-xs leading-5 text-slate-400">{description}</span>
+      </span>
+      <span aria-hidden="true" className="grid h-7 w-7 shrink-0 place-items-center rounded-lg border-2 border-slate-500 bg-slate-950 text-transparent transition peer-checked:border-cyan-300 peer-checked:bg-cyan-300 peer-checked:text-slate-950 peer-focus-visible:ring-2 peer-focus-visible:ring-cyan-300 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-slate-950">
+        <svg viewBox="0 0 16 16" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+          <path d="m3 8 3 3 7-7" />
+        </svg>
+      </span>
+    </label>
+  );
+}
+
 function ConsentChoices({
   preferences,
   onChange,
@@ -32,30 +64,18 @@ function ConsentChoices({
   return (
     <fieldset className="mt-5 space-y-3 border-0 p-0">
       <legend className="text-sm font-black text-white">Choose optional cookies</legend>
-      <label className="flex min-h-14 cursor-pointer items-center justify-between gap-4 rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 transition hover:border-cyan-300/50 focus-within:ring-2 focus-within:ring-cyan-300">
-          <span>
-            <span className="block text-sm font-black text-white">Analytics</span>
-            <span className="mt-0.5 block text-xs leading-5 text-slate-400">Help us understand which games and features are working well.</span>
-        </span>
-        <input
-          type="checkbox"
-          checked={preferences.analytics}
-          onChange={(event) => onChange({ ...preferences, analytics: event.target.checked })}
-          className="h-5 w-5 shrink-0 rounded border-slate-500 bg-slate-950 text-cyan-300 focus:ring-cyan-300"
-        />
-      </label>
-      <label className="flex min-h-14 cursor-pointer items-center justify-between gap-4 rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 transition hover:border-cyan-300/50 focus-within:ring-2 focus-within:ring-cyan-300">
-          <span>
-            <span className="block text-sm font-black text-white">Marketing</span>
-            <span className="mt-0.5 block text-xs leading-5 text-slate-400">Help us measure whether our ads are reaching the right players.</span>
-        </span>
-        <input
-          type="checkbox"
-          checked={preferences.marketing}
-          onChange={(event) => onChange({ ...preferences, marketing: event.target.checked })}
-          className="h-5 w-5 shrink-0 rounded border-slate-500 bg-slate-950 text-cyan-300 focus:ring-cyan-300"
-        />
-      </label>
+      <ConsentChoice
+        title="Analytics"
+        description="Help us understand which games and features are working well."
+        checked={preferences.analytics}
+        onCheckedChange={(analytics) => onChange({ ...preferences, analytics })}
+      />
+      <ConsentChoice
+        title="Marketing"
+        description="Help us measure whether our ads are reaching the right players."
+        checked={preferences.marketing}
+        onCheckedChange={(marketing) => onChange({ ...preferences, marketing })}
+      />
     </fieldset>
   );
 }
