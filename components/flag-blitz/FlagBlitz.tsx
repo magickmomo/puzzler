@@ -41,30 +41,37 @@ import { QuizRound } from "./QuizRound";
 import { Results } from "./Results";
 import { SpeedMatchRound } from "./SpeedMatchRound";
 
-type RoundState = "selecting-mode" | "selecting-difficulty" | "selecting-speed-match-timer" | "playing" | "paused" | "answered" | "results";
+type RoundState = "challenge-intro" | "selecting-mode" | "selecting-difficulty" | "selecting-speed-match-timer" | "playing" | "paused" | "answered" | "results";
+export type FlagBlitzEntry = "standard" | "flag-match-challenge" | "flag-match-timer-selection";
 
-function isSpeedMatchMode(gameMode: GameMode | null): gameMode is "speed-match" | "speed-match-unlimited" {
-  return gameMode === "speed-match" || gameMode === "speed-match-unlimited";
+function isSpeedMatchMode(gameMode: GameMode | null): gameMode is "speed-match" | "flag-match-unlimited" {
+  return gameMode === "speed-match" || gameMode === "flag-match-unlimited";
 }
 
 function isTimedSpeedMatchRun(gameMode: GameMode | null, speedMatchUnlimitedTimed: boolean): boolean {
-  return gameMode === "speed-match" || (gameMode === "speed-match-unlimited" && speedMatchUnlimitedTimed);
+  return gameMode === "speed-match" || (gameMode === "flag-match-unlimited" && speedMatchUnlimitedTimed);
 }
 
 export function FlagBlitz({
   onBack,
   onOpenReport,
   onOpenSettings,
+  entry = "standard",
+  onExploreModes,
+  onSelectFlagMatchUnlimited,
 }: {
   onBack: () => void;
   onOpenReport: () => void;
   onOpenSettings: () => void;
+  entry?: FlagBlitzEntry;
+  onExploreModes?: () => void;
+  onSelectFlagMatchUnlimited?: () => void;
 }) {
   const recordPlay = usePuzzlerStore((state) => state.recordFlagBlitzPlay);
   const recordResult = usePuzzlerStore((state) => state.recordFlagBlitzResult);
   const recordFlagAttempt = usePuzzlerStore((state) => state.recordFlagBlitzAttempt);
   const excludedCountryCodes = usePuzzlerStore((state) => state.flagBlitz.settings.excludedCountryCodes);
-  const [gameMode, setGameMode] = useState<GameMode | null>(null);
+  const [gameMode, setGameMode] = useState<GameMode | null>(entry === "flag-match-timer-selection" ? "flag-match-unlimited" : null);
   const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
   const [questions, setQuestions] = useState<ReturnType<typeof createQuestionDeck>>([]);
   const [countryPool, setCountryPool] = useState<Country[]>([]);
@@ -75,7 +82,13 @@ export function FlagBlitz({
   const [speedMatchDeckIndex, setSpeedMatchDeckIndex] = useState(0);
   const [removingCode, setRemovingCode] = useState<string | null>(null);
   const [promotedCodes, setPromotedCodes] = useState<string[]>([]);
-  const [roundState, setRoundState] = useState<RoundState>("selecting-mode");
+  const [roundState, setRoundState] = useState<RoundState>(
+    entry === "flag-match-challenge"
+      ? "challenge-intro"
+      : entry === "flag-match-timer-selection"
+        ? "selecting-speed-match-timer"
+        : "selecting-mode",
+  );
   const [index, setIndex] = useState(0);
   const [questionNumber, setQuestionNumber] = useState(1);
   const [score, setScore] = useState(0);
@@ -171,12 +184,17 @@ export function FlagBlitz({
   function selectGameMode(selectedGameMode: GameMode) {
     if (!hasMinimumActiveCountries(excludedCountryCodes)) return;
 
+    if (selectedGameMode === "flag-match-unlimited" && onSelectFlagMatchUnlimited) {
+      onSelectFlagMatchUnlimited();
+      return;
+    }
+
     if (selectedGameMode === "speed-match") {
       beginGame(selectedGameMode, null, false);
       return;
     }
 
-    if (selectedGameMode === "speed-match-unlimited") {
+    if (selectedGameMode === "flag-match-unlimited") {
       setGameMode(selectedGameMode);
       setDifficulty(null);
       setRoundState("selecting-speed-match-timer");
@@ -196,7 +214,7 @@ export function FlagBlitz({
     }
 
     const nextQuestions = createQuestionDeck(selectedGameMode, nextCountryPool);
-    const isSpeedMatchUnlimited = selectedGameMode === "speed-match-unlimited";
+    const isSpeedMatchUnlimited = selectedGameMode === "flag-match-unlimited";
     const initialVisibleFlags = isSpeedMatchUnlimited
       ? nextQuestions.slice(0, SPEED_MATCH_UNLIMITED_VISIBLE_FLAGS)
       : [];
@@ -212,7 +230,7 @@ export function FlagBlitz({
     pausedRemainingDurationRef.current = null;
     setGameMode(selectedGameMode);
     setDifficulty(selectedDifficulty);
-    setSpeedMatchUnlimitedTimed(selectedGameMode === "speed-match-unlimited" && timedUnlimited);
+    setSpeedMatchUnlimitedTimed(selectedGameMode === "flag-match-unlimited" && timedUnlimited);
     setQuestions(nextQuestions);
     setCountryPool(nextCountryPool);
     setSpeedMatchTargets(selectedGameMode === "speed-match" ? createSpeedMatchTargetDeck(nextQuestions) : []);
@@ -248,6 +266,10 @@ export function FlagBlitz({
   function startGame(selectedDifficulty: Difficulty) {
     if (!gameMode) return;
     beginGame(gameMode, selectedDifficulty);
+  }
+
+  function startFlagMatchChallenge() {
+    beginGame("flag-match-unlimited", null, true);
   }
 
   function submitAnswer(value: string) {
@@ -323,8 +345,8 @@ export function FlagBlitz({
   }
 
   function selectSpeedMatchFlag(countryCode: string) {
-    const target = gameMode === "speed-match-unlimited" ? speedMatchTarget : speedMatchTargets[index];
-    const selectedFlag = gameMode === "speed-match-unlimited"
+    const target = gameMode === "flag-match-unlimited" ? speedMatchTarget : speedMatchTargets[index];
+    const selectedFlag = gameMode === "flag-match-unlimited"
       ? speedMatchColumns.flat().find((country) => country.code === countryCode)
       : questions.find((country) => country.code === countryCode);
     if (!isSpeedMatchMode(gameMode) || roundState !== "playing" || !target || removingCode) return;
@@ -368,13 +390,13 @@ export function FlagBlitz({
     setScore(nextScore);
     setStreak((current) => current + 1);
 
-    if (gameMode === "speed-match-unlimited" && speedMatchUnlimitedTimed && timerDeadlineRef.current !== null) {
+    if (gameMode === "flag-match-unlimited" && speedMatchUnlimitedTimed && timerDeadlineRef.current !== null) {
       timerDeadlineRef.current = extendDeadline(timerDeadlineRef.current, FLAG_MATCH_TIMED_CORRECT_BONUS_MS);
       setTimeLeft(getTimeLeft(timerDeadlineRef.current));
       showTimerBonus(FLAG_MATCH_TIMED_CORRECT_BONUS_MS / 1_000);
     }
 
-    if (gameMode === "speed-match-unlimited") {
+    if (gameMode === "flag-match-unlimited") {
       const columnIndex = speedMatchColumns.findIndex((column) => column.some((country) => country.code === countryCode));
       const flagIndex = speedMatchColumns[columnIndex]?.findIndex((country) => country.code === countryCode) ?? -1;
       const queuedFlag = speedMatchQueuedFlags[columnIndex];
@@ -403,7 +425,7 @@ export function FlagBlitz({
       ));
 
       if (replacementIndex === -1) {
-        nextDeck = createQuestionDeck("speed-match-unlimited", countryPool);
+        nextDeck = createQuestionDeck("flag-match-unlimited", countryPool);
         replacementIndex = nextDeck.findIndex((country) => !occupiedCodes.has(country.code));
       }
 
@@ -498,8 +520,8 @@ export function FlagBlitz({
   }, [gameMode, roundState, speedMatchUnlimitedTimed, timeLeft]);
 
   const speedMatchActive = isSpeedMatchMode(gameMode);
-  const activeSpeedMatchFlags = gameMode === "speed-match-unlimited" ? speedMatchColumns.flat() : questions;
-  const activeSpeedMatchTarget = gameMode === "speed-match-unlimited" ? speedMatchTarget : speedMatchTargets[index];
+  const activeSpeedMatchFlags = gameMode === "flag-match-unlimited" ? speedMatchColumns.flat() : questions;
+  const activeSpeedMatchTarget = gameMode === "flag-match-unlimited" ? speedMatchTarget : speedMatchTargets[index];
   const timedSpeedMatchActive = isTimedSpeedMatchRun(gameMode, speedMatchUnlimitedTimed);
   const pauseInTimerRow = gameMode === "speed-match" && timedSpeedMatchActive;
   const headerValue = speedMatchActive ? score : streak;
@@ -537,17 +559,25 @@ export function FlagBlitz({
           disabled={!hasMinimumActiveCountries(excludedCountryCodes)}
         />
       )}
+      {roundState === "challenge-intro" && (
+        <section className="flex flex-1 flex-col justify-center py-10 text-center" aria-labelledby="flag-match-challenge-title">
+          <p className="text-xs font-black uppercase tracking-[0.25em] text-cyan-300">Flag Match</p>
+          <h1 id="flag-match-challenge-title" className="mt-2 text-4xl font-black tracking-tight text-white">Flag Match: 60-Second Challenge</h1>
+          <p className="mx-auto mt-3 max-w-sm text-base leading-7 text-slate-400">Find the named country&apos;s flag. Every correct answer adds three seconds.</p>
+          <button type="button" autoFocus onClick={startFlagMatchChallenge} disabled={!hasMinimumActiveCountries(excludedCountryCodes)} className="mx-auto mt-8 min-h-14 w-full max-w-sm rounded-2xl bg-cyan-300 px-5 font-black text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-100 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">Start challenge</button>
+        </section>
+      )}
       {gameMode && roundState === "selecting-difficulty" && (
         <DifficultySelector gameMode={gameMode} onSelect={startGame} onBack={() => setRoundState("selecting-mode")} />
       )}
-      {gameMode === "speed-match-unlimited" && roundState === "selecting-speed-match-timer" && (
+      {gameMode === "flag-match-unlimited" && roundState === "selecting-speed-match-timer" && (
         <section className="flex flex-1 flex-col justify-center py-10 text-center" aria-labelledby="timer-choice-title">
           <p className="text-xs font-black uppercase tracking-[0.25em] text-cyan-300">Flag Match Unlimited</p>
           <h1 id="timer-choice-title" className="mt-2 text-4xl font-black tracking-tight text-white">Choose your timer</h1>
           <p className="mx-auto mt-3 max-w-xs text-base leading-7 text-slate-400">Play relaxed with no clock, or race to find as many flags as you can in 60 seconds.</p>
           <div className="mx-auto mt-8 w-full max-w-sm space-y-3">
-            <button type="button" autoFocus onClick={() => beginGame("speed-match-unlimited", null, true)} className="group min-h-16 w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 text-left font-black text-white transition hover:border-cyan-300 hover:bg-cyan-300 hover:text-slate-950 focus:outline-none focus-visible:border-cyan-300 focus-visible:bg-cyan-300 focus-visible:text-slate-950 focus-visible:ring-2 focus-visible:ring-cyan-100 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">60-second timer<span className="mt-1 block text-sm font-semibold text-slate-500 transition group-hover:text-slate-700 group-focus-visible:text-slate-700">Every correct flag adds 3 seconds.</span></button>
-            <button type="button" onClick={() => beginGame("speed-match-unlimited", null, false)} className="group min-h-16 w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 text-left font-black text-white transition hover:border-cyan-300 hover:bg-cyan-300 hover:text-slate-950 focus:outline-none focus-visible:border-cyan-300 focus-visible:bg-cyan-300 focus-visible:text-slate-950 focus-visible:ring-2 focus-visible:ring-cyan-100 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">No timer<span className="mt-1 block text-sm font-semibold text-slate-500 transition group-hover:text-slate-700 group-focus-visible:text-slate-700">Play until you save the run.</span></button>
+            <button type="button" autoFocus onClick={() => beginGame("flag-match-unlimited", null, true)} className="group min-h-16 w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 text-left font-black text-white transition hover:border-cyan-300 hover:bg-cyan-300 hover:text-slate-950 focus:outline-none focus-visible:border-cyan-300 focus-visible:bg-cyan-300 focus-visible:text-slate-950 focus-visible:ring-2 focus-visible:ring-cyan-100 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">60-second timer<span className="mt-1 block text-sm font-semibold text-slate-500 transition group-hover:text-slate-700 group-focus-visible:text-slate-700">Every correct flag adds 3 seconds.</span></button>
+            <button type="button" onClick={() => beginGame("flag-match-unlimited", null, false)} className="group min-h-16 w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 text-left font-black text-white transition hover:border-cyan-300 hover:bg-cyan-300 hover:text-slate-950 focus:outline-none focus-visible:border-cyan-300 focus-visible:bg-cyan-300 focus-visible:text-slate-950 focus-visible:ring-2 focus-visible:ring-cyan-100 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">No timer<span className="mt-1 block text-sm font-semibold text-slate-500 transition group-hover:text-slate-700 group-focus-visible:text-slate-700">Play until you save the run.</span></button>
             <button type="button" onClick={() => setRoundState("selecting-mode")} className="min-h-12 w-full rounded-2xl px-5 font-black text-slate-400 transition hover:bg-slate-900 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300">Back to modes</button>
           </div>
         </section>
@@ -583,9 +613,9 @@ export function FlagBlitz({
           matchedCodes={matchedCodes}
           incorrectCodes={incorrectCodes}
           removingCode={removingCode}
-          isUnlimited={gameMode === "speed-match-unlimited"}
-          columns={gameMode === "speed-match-unlimited" ? speedMatchColumns : null}
-          queuedFlags={gameMode === "speed-match-unlimited" ? speedMatchQueuedFlags : null}
+          isUnlimited={gameMode === "flag-match-unlimited"}
+          columns={gameMode === "flag-match-unlimited" ? speedMatchColumns : null}
+          queuedFlags={gameMode === "flag-match-unlimited" ? speedMatchQueuedFlags : null}
           promotedCodes={promotedCodes}
           wrongFlagName={wrongFlagName}
           onSelect={(country) => selectSpeedMatchFlag(country.code)}
@@ -607,6 +637,8 @@ export function FlagBlitz({
             beginGame(gameMode, difficulty, speedMatchUnlimitedTimed);
           }}
           onHub={onBack}
+          secondaryActionLabel={entry === "flag-match-challenge" ? "Explore other games/modes" : undefined}
+          onSecondaryAction={entry === "flag-match-challenge" ? onExploreModes : undefined}
         />
       )}
       {roundState === "paused" && gameMode && (

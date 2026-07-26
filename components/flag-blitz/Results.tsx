@@ -12,6 +12,8 @@ export function Results({
   difficulty,
   onReplay,
   onHub,
+  secondaryActionLabel = "Back to Hub",
+  onSecondaryAction,
 }: {
   gameMode: GameMode;
   score: number;
@@ -23,9 +25,11 @@ export function Results({
   difficulty: Difficulty | null;
   onReplay: () => void;
   onHub: () => void;
+  secondaryActionLabel?: string;
+  onSecondaryAction?: () => void;
 }) {
   const isUnlimited = gameMode === "unlimited";
-  const isSpeedMatchUnlimited = gameMode === "speed-match-unlimited";
+  const isSpeedMatchUnlimited = gameMode === "flag-match-unlimited";
   const isSpeedMatch = gameMode === "speed-match" || isSpeedMatchUnlimited;
   const completedSpeedMatch = gameMode === "speed-match" && speedMatchCompletionTimeMs !== null;
   const percent = isUnlimited || isSpeedMatch ? 0 : Math.round((score / total) * 100);
@@ -67,7 +71,7 @@ export function Results({
       </div>
       <div className="mx-auto mt-8 w-full max-w-sm space-y-3">
         <button type="button" onClick={onReplay} className="min-h-14 w-full rounded-2xl bg-cyan-300 px-5 font-black text-slate-950 transition hover:bg-cyan-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-100 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">Play again</button>
-        <button type="button" onClick={onHub} className="min-h-14 w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 font-black text-white transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400">Back to Hub</button>
+        <button type="button" onClick={onSecondaryAction ?? onHub} className="min-h-14 w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 font-black text-white transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400">{secondaryActionLabel}</button>
       </div>
     </section>
   );

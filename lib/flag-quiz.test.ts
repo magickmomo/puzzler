@@ -23,20 +23,41 @@ describe("answer normalization", () => {
   it("normalizes whitespace, punctuation, and accents", () => {
     expect(normalizeAnswer("  Côte d’Ivoire! ")).toBe("cotedivoire");
     expect(normalizeAnswer("Cote dIvoire")).toBe("cotedivoire");
+    expect(normalizeAnswer("Trinidad & Tobago")).toBe("trinidadandtobago");
   });
 
-  it("accepts country aliases and rejects unrelated answers", () => {
+  it("accepts country aliases, connector variants, and rejects unrelated answers", () => {
     const ivoryCoast = COUNTRIES.find((country) => country.code === "ci");
+    const trinidadAndTobago = COUNTRIES.find((country) => country.code === "tt");
     const unitedKingdom = COUNTRIES.find((country) => country.code === "gb");
     const turkey = COUNTRIES.find((country) => country.code === "tr");
 
     expect(ivoryCoast).toBeDefined();
+    expect(trinidadAndTobago).toBeDefined();
     expect(unitedKingdom).toBeDefined();
     expect(turkey).toBeDefined();
     expect(isCorrectAnswer("Ivory Coast", ivoryCoast!)).toBe(true);
+    expect(isCorrectAnswer("Trinidad & Tobago", trinidadAndTobago!)).toBe(true);
     expect(isCorrectAnswer("UK", unitedKingdom!)).toBe(true);
     expect(isCorrectAnswer("Turkey", turkey!)).toBe(true);
     expect(isCorrectAnswer("Greece", turkey!)).toBe(false);
+  });
+
+  it("accepts cautious spelling mistakes for medium and long country names", () => {
+    const chile = COUNTRIES.find((country) => country.code === "cl");
+    const bosniaAndHerzegovina = COUNTRIES.find((country) => country.code === "ba");
+
+    expect(chile).toBeDefined();
+    expect(bosniaAndHerzegovina).toBeDefined();
+    expect(isCorrectAnswer("Chilie", chile!)).toBe(true);
+    expect(isCorrectAnswer("Bosnia and Herzegovnia", bosniaAndHerzegovina!)).toBe(true);
+  });
+
+  it("keeps four-letter country names exact to avoid near-name matches", () => {
+    const iran = COUNTRIES.find((country) => country.code === "ir");
+
+    expect(iran).toBeDefined();
+    expect(isCorrectAnswer("Iraq", iran!)).toBe(false);
   });
 
   it("includes the UK home nations alongside the United Kingdom", () => {
@@ -88,7 +109,7 @@ describe("quiz decks", () => {
   });
 
   it("creates a full source deck and a visible target for Flag Match Unlimited", () => {
-    const deck = createQuestionDeck("speed-match-unlimited");
+    const deck = createQuestionDeck("flag-match-unlimited");
     const visibleFlags = deck.slice(0, SPEED_MATCH_UNLIMITED_VISIBLE_FLAGS);
     const target = pickSpeedMatchTarget(visibleFlags);
     const columns = createSpeedMatchUnlimitedColumns(visibleFlags);

@@ -11,7 +11,7 @@ const emptyScores = {
 describe("player records", () => {
   it("keeps timed Speed Match completion times and untimed scores separate", () => {
     const timed = getUpdatedBestScores(emptyScores, "speed-match", 10, 18_400);
-    const untimed = getUpdatedBestScores(timed, "speed-match-unlimited", 25);
+    const untimed = getUpdatedBestScores(timed, "flag-match-unlimited", 25);
 
     expect(untimed).toEqual({
       bestClassicScore: 0,
@@ -30,6 +30,6 @@ describe("player records", () => {
   });
 
   it("never lowers an existing untimed record", () => {
-    expect(getUpdatedBestScores({ ...emptyScores, bestSpeedMatchUnlimitedScore: 12 }, "speed-match-unlimited", 8).bestSpeedMatchUnlimitedScore).toBe(12);
+    expect(getUpdatedBestScores({ ...emptyScores, bestSpeedMatchUnlimitedScore: 12 }, "flag-match-unlimited", 8).bestSpeedMatchUnlimitedScore).toBe(12);
   });
 });
