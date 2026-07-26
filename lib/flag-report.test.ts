@@ -10,10 +10,10 @@ describe("flag report stats", () => {
     let stats = createEmptyFlagStatsByMode();
     stats = recordFlagAttempt(stats, "classic", "br", false);
     stats = recordFlagAttempt(stats, "classic", "br", true);
-    stats = recordFlagAttempt(stats, "speed-match-unlimited", "br", false);
+    stats = recordFlagAttempt(stats, "flag-match-unlimited", "br", false);
 
     expect(stats.classic.br).toEqual({ attempts: 2, correct: 1, wrong: 1 });
-    expect(stats["speed-match-unlimited"].br).toEqual({ attempts: 1, correct: 0, wrong: 1 });
+    expect(stats["flag-match-unlimited"].br).toEqual({ attempts: 1, correct: 0, wrong: 1 });
     expect(stats["speed-match"]).toEqual({});
   });
 
@@ -52,7 +52,7 @@ describe("flag report stats", () => {
       classic: {},
       unlimited: {},
       "speed-match": {},
-      "speed-match-unlimited": {},
+      "flag-match-unlimited": {},
     });
   });
 });

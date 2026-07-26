@@ -6,6 +6,7 @@ import type { GameMode } from "./flag-quiz";
 import {
   createEmptyFlagStatsByMode,
   recordFlagAttempt as updateFlagAttempt,
+  type FlagAttemptStats,
   type FlagStatsByMode,
 } from "./flag-report";
 import { getUpdatedBestScores, type BestScores } from "./player-records";
@@ -46,8 +47,11 @@ type PuzzlerStore = {
   recordCapitalCitiesResult: (timeMs: number) => void;
 };
 
-type LegacyPlayerRecords = Partial<FlagBlitzProfile> & {
+type LegacyFlagStatsByMode = Partial<Record<GameMode | "speed-match-unlimited", Record<string, FlagAttemptStats>>>;
+
+type LegacyPlayerRecords = Omit<Partial<FlagBlitzProfile>, "flagStatsByMode"> & {
   settings?: PuzzlerSettings;
+  flagStatsByMode?: LegacyFlagStatsByMode;
 };
 
 export function createDefaultFlagBlitzProfile(): FlagBlitzProfile {
@@ -69,9 +73,23 @@ export function createDefaultCapitalCitiesProfile(): CapitalCitiesProfile {
   };
 }
 
-type VersionTwoFlagBlitzProfile = Partial<FlagBlitzProfile> & {
+type VersionTwoFlagBlitzProfile = Omit<Partial<FlagBlitzProfile>, "flagStatsByMode"> & {
   bestSpeedMatchScore?: number;
+  flagStatsByMode?: LegacyFlagStatsByMode;
 };
+
+function migrateFlagStatsByMode(flagStatsByMode: LegacyFlagStatsByMode | undefined): FlagStatsByMode {
+  const { "speed-match-unlimited": legacyFlagMatchUnlimited, ...currentStats } = flagStatsByMode ?? {};
+
+  return {
+    ...createEmptyFlagStatsByMode(),
+    ...currentStats,
+    "flag-match-unlimited": {
+      ...legacyFlagMatchUnlimited,
+      ...currentStats["flag-match-unlimited"],
+    },
+  };
+}
 
 export function migratePlayerRecords(persistedState: unknown, version: number): {
   flagBlitz: FlagBlitzProfile;
@@ -93,6 +111,7 @@ export function migratePlayerRecords(persistedState: unknown, version: number): 
         ...flagBlitzDefaults,
         ...flagBlitz,
         bestSpeedMatchTimeMs: flagBlitz.bestSpeedMatchTimeMs ?? flagBlitzDefaults.bestSpeedMatchTimeMs,
+        flagStatsByMode: migrateFlagStatsByMode(flagBlitz.flagStatsByMode),
       },
       capitalCities: {
         ...capitalCitiesDefaults,
@@ -111,7 +130,7 @@ export function migratePlayerRecords(persistedState: unknown, version: number): 
       bestClassicScore: legacy.bestClassicScore ?? flagBlitzDefaults.bestClassicScore,
       bestUnlimitedStreak: legacy.bestUnlimitedStreak ?? flagBlitzDefaults.bestUnlimitedStreak,
       bestSpeedMatchUnlimitedScore: legacy.bestSpeedMatchUnlimitedScore ?? flagBlitzDefaults.bestSpeedMatchUnlimitedScore,
-      flagStatsByMode: legacy.flagStatsByMode ?? flagBlitzDefaults.flagStatsByMode,
+      flagStatsByMode: migrateFlagStatsByMode(legacy.flagStatsByMode),
       settings: legacy.settings ?? flagBlitzDefaults.settings,
     },
     capitalCities: capitalCitiesDefaults,
@@ -169,7 +188,7 @@ export const usePuzzlerStore = create<PuzzlerStore>()(
     }),
     {
       name: "puzzler-player-records",
-      version: 4,
+      version: 5,
       migrate: migratePlayerRecords,
       partialize: (state) => ({ flagBlitz: state.flagBlitz, capitalCities: state.capitalCities }),
     },

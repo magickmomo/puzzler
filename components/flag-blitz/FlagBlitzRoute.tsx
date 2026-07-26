@@ -3,11 +3,17 @@
 import { useRouter } from "next/navigation";
 import { FlagReport } from "@/components/FlagReport";
 import { Settings } from "@/components/Settings";
-import { FlagBlitz } from "./FlagBlitz";
+import { FlagBlitz, type FlagBlitzEntry } from "./FlagBlitz";
 
 export type FlagBlitzRouteView = "play" | "report" | "settings";
 
-export function FlagBlitzRoute({ view = "play" }: { view?: FlagBlitzRouteView }) {
+export function FlagBlitzRoute({
+  view = "play",
+  entry = "standard",
+}: {
+  view?: FlagBlitzRouteView;
+  entry?: FlagBlitzEntry;
+}) {
   const router = useRouter();
   const goToHub = () => router.push("/");
   const goToFlagBlitz = () => router.push("/flag-blitz");
@@ -20,6 +26,9 @@ export function FlagBlitzRoute({ view = "play" }: { view?: FlagBlitzRouteView })
       onBack={goToHub}
       onOpenReport={() => router.push("/flag-blitz/report")}
       onOpenSettings={() => router.push("/flag-blitz/settings")}
+      entry={entry}
+      onExploreModes={goToHub}
+      onSelectFlagMatchUnlimited={() => router.push("/flag-blitz/flag-match?from=launcher")}
     />
   );
 }

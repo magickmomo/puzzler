@@ -1,7 +1,7 @@
 import { COUNTRIES, type Country } from "@/app/data/countries";
 import type { GameMode } from "./flag-quiz";
 
-export const FLAG_REPORT_GAME_MODES = ["classic", "unlimited", "speed-match", "speed-match-unlimited"] as const satisfies readonly GameMode[];
+export const FLAG_REPORT_GAME_MODES = ["classic", "unlimited", "speed-match", "flag-match-unlimited"] as const satisfies readonly GameMode[];
 
 export type FlagAttemptStats = {
   attempts: number;
@@ -24,7 +24,7 @@ export const FLAG_REPORT_MODE_LABELS: Record<FlagReportFilter, string> = {
   classic: "Classic",
   unlimited: "Classic Unlimited",
   "speed-match": "Speed Match",
-  "speed-match-unlimited": "Flag Match Unlimited",
+  "flag-match-unlimited": "Flag Match Unlimited",
 };
 
 export function createEmptyFlagStatsByMode(): FlagStatsByMode {
@@ -32,7 +32,7 @@ export function createEmptyFlagStatsByMode(): FlagStatsByMode {
     classic: {},
     unlimited: {},
     "speed-match": {},
-    "speed-match-unlimited": {},
+    "flag-match-unlimited": {},
   };
 }
 

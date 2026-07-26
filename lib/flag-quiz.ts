@@ -1,7 +1,7 @@
 import { COUNTRIES, type Country } from "@/app/data/countries";
 
 export type Difficulty = "easy" | "medium" | "hard";
-export type GameMode = "classic" | "unlimited" | "speed-match" | "speed-match-unlimited";
+export type GameMode = "classic" | "unlimited" | "speed-match" | "flag-match-unlimited";
 export type NextRoundAction = "next" | "reshuffle" | "results";
 
 export type ScoreState = {
@@ -41,7 +41,7 @@ export function shuffle<T>(items: readonly T[]): T[] {
 
 export function createQuestionDeck(gameMode: GameMode, countries: readonly Country[] = COUNTRIES): Country[] {
   const deck = shuffle(countries);
-  return gameMode === "unlimited" || gameMode === "speed-match-unlimited" ? deck : deck.slice(0, QUESTIONS_PER_GAME);
+  return gameMode === "unlimited" || gameMode === "flag-match-unlimited" ? deck : deck.slice(0, QUESTIONS_PER_GAME);
 }
 
 export function createSpeedMatchTargetDeck(board: readonly Country[]): Country[] {
@@ -75,12 +75,46 @@ export function normalizeAnswer(value: string): string {
     .normalize("NFD")
     .replace(/\p{M}/gu, "")
     .toLowerCase()
+    .replace(/&/gu, "and")
     .replace(/[^\p{L}\p{N}]/gu, "");
+}
+
+function getAllowedTypoCount(normalizedName: string): number {
+  if (normalizedName.length <= 4) return 0;
+  return normalizedName.length <= 8 ? 1 : 2;
+}
+
+function getEditDistance(left: string, right: string): number {
+  if (left === right) return 0;
+  if (left.length === 0) return right.length;
+  if (right.length === 0) return left.length;
+
+  let previousRow = Array.from({ length: right.length + 1 }, (_, index) => index);
+
+  for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
+    const currentRow = [leftIndex];
+
+    for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
+      const substitutionCost = left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1;
+      currentRow[rightIndex] = Math.min(
+        previousRow[rightIndex] + 1,
+        currentRow[rightIndex - 1] + 1,
+        previousRow[rightIndex - 1] + substitutionCost,
+      );
+    }
+
+    previousRow = currentRow;
+  }
+
+  return previousRow[right.length];
 }
 
 export function isCorrectAnswer(value: string, country: Country): boolean {
   const normalizedAnswer = normalizeAnswer(value);
-  return [country.name, ...country.aliases].some((name) => normalizeAnswer(name) === normalizedAnswer);
+  return [country.name, ...country.aliases].some((name) => {
+    const normalizedName = normalizeAnswer(name);
+    return getEditDistance(normalizedAnswer, normalizedName) <= getAllowedTypoCount(normalizedName);
+  });
 }
 
 export function getCountryHint(country: Country): string {

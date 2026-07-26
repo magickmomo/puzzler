@@ -73,4 +73,19 @@ describe("player-record migration", () => {
       },
     });
   });
+
+  it("moves legacy Flag Match Unlimited history to the renamed mode key", () => {
+    const migrated = migratePlayerRecords({
+      flagBlitz: {
+        flagStatsByMode: {
+          "speed-match-unlimited": {
+            br: { attempts: 2, correct: 1, wrong: 1 },
+          },
+        },
+      },
+    }, 4);
+
+    expect(migrated.flagBlitz.flagStatsByMode["flag-match-unlimited"].br).toEqual({ attempts: 2, correct: 1, wrong: 1 });
+    expect(migrated.flagBlitz.flagStatsByMode).not.toHaveProperty("speed-match-unlimited");
+  });
 });
