@@ -111,7 +111,17 @@ function getEditDistance(left: string, right: string): number {
 
 export function isCorrectAnswer(value: string, country: Country): boolean {
   const normalizedAnswer = normalizeAnswer(value);
-  return [country.name, ...country.aliases].some((name) => {
+  const acceptedNames = [country.name, ...country.aliases];
+
+  if (acceptedNames.some((name) => normalizeAnswer(name) === normalizedAnswer)) return true;
+
+  const namesAnotherCountryExactly = COUNTRIES.some((candidate) => (
+    candidate.code !== country.code
+    && [candidate.name, ...candidate.aliases].some((name) => normalizeAnswer(name) === normalizedAnswer)
+  ));
+  if (namesAnotherCountryExactly) return false;
+
+  return acceptedNames.some((name) => {
     const normalizedName = normalizeAnswer(name);
     return getEditDistance(normalizedAnswer, normalizedName) <= getAllowedTypoCount(normalizedName);
   });

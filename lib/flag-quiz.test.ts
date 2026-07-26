@@ -60,6 +60,24 @@ describe("answer normalization", () => {
     expect(isCorrectAnswer("Iraq", iran!)).toBe(false);
   });
 
+  it("never accepts another country name through typo tolerance", () => {
+    const incorrectCountryAnswers = [
+      ["au", "Austria"],
+      ["gm", "Zambia"],
+      ["ie", "Iceland"],
+      ["is", "Ireland"],
+      ["kp", "South Korea"],
+      ["kr", "North Korea"],
+      ["zm", "Gambia"],
+    ] as const;
+
+    for (const [targetCode, answer] of incorrectCountryAnswers) {
+      const target = COUNTRIES.find((country) => country.code === targetCode);
+      expect(target).toBeDefined();
+      expect(isCorrectAnswer(answer, target!)).toBe(false);
+    }
+  });
+
   it("includes the UK home nations alongside the United Kingdom", () => {
     expect(COUNTRIES.filter((country) => ["gb", "gb-eng", "gb-nir", "gb-sct", "gb-wls"].includes(country.code)).map((country) => country.name))
       .toEqual(["England", "Northern Ireland", "Scotland", "United Kingdom", "Wales"]);
