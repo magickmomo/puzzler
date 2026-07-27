@@ -3,7 +3,7 @@ import { FlagBlitzRoute } from "@/components/flag-blitz/FlagBlitzRoute";
 
 export const metadata: Metadata = {
   title: "Flag Match: 60-Second Challenge | Puzzler",
-  description: "Find the named country’s flag before time runs out. Every correct answer adds three seconds.",
+  description: "Find the named country’s flag before time runs out. Every correct answer adds two seconds.",
 };
 
 export default async function FlagMatchChallengePage({
