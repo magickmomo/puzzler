@@ -8,6 +8,25 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: readonly ChangelogEntry[] = [
   {
+    date: "July 27, 2026",
+    title: "Flag Match time tuning",
+    summary: "Timed Flag Match Unlimited now has a tighter pace.",
+    highlights: [
+      "Each correct flag in a timed Flag Match Unlimited run now adds 2 seconds.",
+    ],
+  },
+  {
+    date: "July 26, 2026",
+    title: "Flag Match landing and answer refinements",
+    summary: "Flag Match gained a direct landing flow, while typed country answers became more forgiving without accepting another country as correct.",
+    highlights: [
+      "Flag Match now has a dedicated route: ad visitors get a focused 60-second start screen, while the regular launcher keeps the timer choice.",
+      "Gameplay and analytics now identify this mode as flag-match-unlimited.",
+      "Typed country answers accept small spelling slips, but a different country name can no longer count as correct.",
+      "Explore other games/modes from Flag Match results now returns to the Puzzler home page.",
+    ],
+  },
+  {
     date: "July 25, 2026",
     title: "Privacy choices for Puzzler",
     summary: "Optional analytics and ad measurement now with explicit consent.",

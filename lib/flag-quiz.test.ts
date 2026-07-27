@@ -174,10 +174,10 @@ describe("Speed Match timer", () => {
     expect(getTimeLeft(resumedDeadline, 30_000)).toBe(9);
   });
 
-  it("adds three seconds to a timed Flag Match Unlimited run after a correct flag", () => {
+  it("adds two seconds to a timed Flag Match Unlimited run after a correct flag", () => {
     const deadline = 50_000;
 
-    expect(extendDeadline(deadline, FLAG_MATCH_TIMED_CORRECT_BONUS_MS)).toBe(53_000);
-    expect(getTimeLeft(extendDeadline(60_000, FLAG_MATCH_TIMED_CORRECT_BONUS_MS), 0)).toBe(63);
+    expect(extendDeadline(deadline, FLAG_MATCH_TIMED_CORRECT_BONUS_MS)).toBe(52_000);
+    expect(getTimeLeft(extendDeadline(60_000, FLAG_MATCH_TIMED_CORRECT_BONUS_MS), 0)).toBe(62);
   });
 });
