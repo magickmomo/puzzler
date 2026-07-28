@@ -411,7 +411,7 @@ export function FlagBlitz({
     if (!url || !challengeToShare || !navigator.share) return null;
 
     const shareData = {
-      title: "Flag Match challenge",
+      title: "Flag Marathon challenge",
       text: `${challenge ? "A challenger found" : "I found"} ${challengeToShare.challengerScore} of ${challengeToShare.countryPool.length} flags in ${formatSeconds(challengeToShare.challengerDurationMs)} with ${challengeToShare.challengerMistakes} mistakes. Can you beat me?`,
       url,
     };
@@ -722,7 +722,7 @@ export function FlagBlitz({
   const headerScore = showClassicHeaderScore
     ? { value: headerValue, label: headerLabel }
     : null;
-  const headerTitle = isFlagMatchUnlimited ? "Flag Match Unlimited" : isSpeedMatch ? "Speed Match" : "Flag Blitz";
+  const headerTitle = isFlagMatchUnlimited ? "Flag Marathon" : isSpeedMatch ? "Speed Match" : "Flag Blitz";
 
   return (
     <main className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-8">
@@ -744,8 +744,8 @@ export function FlagBlitz({
       )}
       {roundState === "challenge-intro" && (
         <section className="flex flex-1 flex-col justify-center py-10 text-center" aria-labelledby="flag-match-challenge-title">
-          <p className="text-xs font-black uppercase tracking-[0.25em] text-cyan-300">Flag Match</p>
-          <h1 id="flag-match-challenge-title" className="mt-2 text-4xl font-black tracking-tight text-white">{challenge ? "Beat the challenger" : "Flag Match: 60-Second Challenge"}</h1>
+          <p className="text-xs font-black uppercase tracking-[0.25em] text-cyan-300">Flag Marathon</p>
+          <h1 id="flag-match-challenge-title" className="mt-2 text-4xl font-black tracking-tight text-white">{challenge ? "Beat the challenger" : "Flag Marathon: 60-Second Challenge"}</h1>
           <p className="mx-auto mt-3 max-w-sm text-base leading-7 text-slate-400">
             {challenge
               ? <>They found <span className="font-black text-amber-300">{challenge.challengerScore} of {challenge.countryPool.length}</span> flags in {formatSeconds(challenge.challengerDurationMs)} with {challenge.challengerMistakes} {challenge.challengerMistakes === 1 ? "mistake" : "mistakes"}. You&apos;ll get the exact same board and targets.</>
@@ -759,10 +759,10 @@ export function FlagBlitz({
       )}
       {gameMode === "flag-match-unlimited" && roundState === "selecting-speed-match-timer" && (
         <section className="flex flex-1 flex-col justify-center py-10 text-center" aria-labelledby="timer-choice-title">
-          <p className="text-xs font-black uppercase tracking-[0.25em] text-cyan-300">Flag Match Unlimited</p>
+          <p className="text-xs font-black uppercase tracking-[0.25em] text-cyan-300">Flag Marathon</p>
           <h1 id="timer-choice-title" className="mt-2 text-4xl font-black tracking-tight text-white">Choose your timer</h1>
           <div className="mx-auto mt-8 w-full max-w-sm space-y-3">
-            <button type="button" autoFocus onClick={() => beginGame("flag-match-unlimited", null, true)} className="group min-h-16 w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 text-left font-black text-white transition hover:border-cyan-300 hover:bg-cyan-300 hover:text-slate-950 focus:outline-none focus-visible:border-cyan-300 focus-visible:bg-cyan-300 focus-visible:text-slate-950 focus-visible:ring-2 focus-visible:ring-cyan-100 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">60-second timer<span className="mt-1 block text-sm font-semibold text-slate-500 transition group-hover:text-slate-700 group-focus-visible:text-slate-700">Every correct flag adds 2 seconds. Shared challenges use this selected flag pool.</span></button>
+            <button type="button" autoFocus onClick={() => beginGame("flag-match-unlimited", null, true)} className="group min-h-16 w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 text-left font-black text-white transition hover:border-cyan-300 hover:bg-cyan-300 hover:text-slate-950 focus:outline-none focus-visible:border-cyan-300 focus-visible:bg-cyan-300 focus-visible:text-slate-950 focus-visible:ring-2 focus-visible:ring-cyan-100 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">60-second timer<span className="mt-1 block text-sm font-semibold text-slate-500 transition group-hover:text-slate-700 group-focus-visible:text-slate-700">Every correct flag adds 2 seconds.</span></button>
             <button type="button" onClick={() => beginGame("flag-match-unlimited", null, false)} className="group min-h-16 w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 text-left font-black text-white transition hover:border-cyan-300 hover:bg-cyan-300 hover:text-slate-950 focus:outline-none focus-visible:border-cyan-300 focus-visible:bg-cyan-300 focus-visible:text-slate-950 focus-visible:ring-2 focus-visible:ring-cyan-100 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">No timer<span className="mt-1 block text-sm font-semibold text-slate-500 transition group-hover:text-slate-700 group-focus-visible:text-slate-700">Play until you save the run.</span></button>
             <button type="button" onClick={() => setRoundState("selecting-mode")} className="min-h-12 w-full rounded-2xl px-5 font-black text-slate-400 transition hover:bg-slate-900 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300">Back to modes</button>
           </div>

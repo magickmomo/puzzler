@@ -84,7 +84,7 @@ export function Results({
       <h1 id="results-title" className="mt-2 text-4xl font-black tracking-tight text-white">{title}</h1>
       <p className="mx-auto mt-3 max-w-xs text-slate-400">
         {challenge
-          ? `You found ${score} of ${total} flags on the same Flag Match run.`
+          ? `You found ${score} of ${total} flags on the same Flag Marathon run.`
           : isSpeedMatchUnlimited
           ? `You found ${score} flags before ending the run.`
           : isSpeedMatch

@@ -102,7 +102,7 @@ export function SpeedMatchRound({
   return (
     <section className="flex flex-1 flex-col py-4" aria-labelledby="speed-match-target">
       {isUnlimited ? (
-        <div className="grid grid-cols-3 items-center gap-3 border-b border-slate-900 px-2 py-3 text-sm font-black" aria-label="Flag Match Unlimited statistics">
+        <div className="grid grid-cols-3 items-center gap-3 border-b border-slate-900 px-2 py-3 text-sm font-black" aria-label="Flag Marathon statistics">
           <p className="text-rose-300">{mistakes} {mistakes === 1 ? "mistake" : "mistakes"}</p>
           {timeLeft !== null && (
             <div className="relative flex justify-center">

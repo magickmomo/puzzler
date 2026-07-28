@@ -8,6 +8,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: readonly ChangelogEntry[] = [
   {
+    date: "July 28, 2026",
+    title: "Flag Marathon and challenges",
+    summary: "Flag Blitz gets more responsive play, clearer settings, and shareable Flag Marathon runs.",
+    highlights: [
+      "Flag Match Unlimited is now Flag Marathon, with sharper match feedback, mistake counts, clearer run results, and a unified game timer.",
+      "Flag settings now separate sovereign nations from other flags, with tabs for faster selection.",
+      "Every Flag Blitz run now uses a private seed, making timed Flag Marathon runs reproducible without preloading boards.",
+      "Timed Flag Marathon results can be shared as a challenge: friends receive the same selected flag pool, board, targets, score, time, and mistakes to beat.",
+      "New challenge links let you share a Flag Marathon run with friends, who receive the same flags and targets to beat.",
+    ],
+  },
+  {
     date: "July 27, 2026",
     title: "Flag Match time tuning",
     summary: "Timed Flag Match Unlimited now has a tighter pace.",

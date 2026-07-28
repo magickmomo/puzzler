@@ -62,7 +62,7 @@ export function Settings({ onBack, onHub }: { onBack: () => void; onHub: () => v
       <section className="rounded-3xl border border-cyan-300/20 bg-cyan-300/5 p-5" aria-live="polite">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">Active flags</p>
         <p className="mt-1 text-3xl font-black text-white">{activeCount} <span className="text-lg text-slate-500">of {COUNTRIES.length}</span></p>
-        <p className="mt-2 text-sm leading-6 text-slate-400">At least {MINIMUM_ACTIVE_COUNTRIES} flags stay active so every Flag Match Unlimited board can be filled.</p>
+        <p className="mt-2 text-sm leading-6 text-slate-400">At least {MINIMUM_ACTIVE_COUNTRIES} flags stay active so every Flag Marathon board can be filled.</p>
         {belowMinimum && <p className="mt-3 rounded-xl bg-rose-400/10 px-3 py-2 text-sm font-bold text-rose-200">Add back at least {MINIMUM_ACTIVE_COUNTRIES - activeCount} flags before starting a new run.</p>}
         {!belowMinimum && atMinimum && <p className="mt-3 rounded-xl bg-amber-300/10 px-3 py-2 text-sm font-bold text-amber-100">Minimum reached. Include a flag before excluding another.</p>}
       </section>

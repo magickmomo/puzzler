@@ -20,7 +20,7 @@ export function GET(request: Request) {
   return new ImageResponse(
     (
       <div style={{ background: "#020617", color: "white", display: "flex", flexDirection: "column", height: "100%", width: "100%", padding: "72px", fontFamily: "sans-serif" }}>
-        <div style={{ color: "#67e8f9", display: "flex", fontSize: 28, fontWeight: 800, letterSpacing: 5, textTransform: "uppercase" }}>Puzzler · Flag Match</div>
+        <div style={{ color: "#67e8f9", display: "flex", fontSize: 28, fontWeight: 800, letterSpacing: 5, textTransform: "uppercase" }}>Puzzler · Flag Marathon</div>
         <div style={{ display: "flex", fontSize: 70, fontWeight: 900, lineHeight: 1.05, marginTop: 42 }}>Can you beat this run?</div>
         {valid ? (
           <div style={{ color: "#fcd34d", display: "flex", fontSize: 54, fontWeight: 900, marginTop: 42 }}>{score} / {total} flags</div>
