@@ -6,6 +6,7 @@ import {
   FLAG_MATCH_CHALLENGE_VERSIONS,
   FLAG_MATCH_CHALLENGE_VERSION,
   createFlagMatchChallengeUrl,
+  getFlagMatchChallengeOutcome,
   orderFlagMatchChallengePool,
   parseFlagMatchChallenge,
   type FlagMatchChallenge,
@@ -74,6 +75,13 @@ describe("Flag Match challenges", () => {
   it("rejects pools smaller than the playable minimum", () => {
     const params = getParams({ ...BASE_CHALLENGE, countryPool: V1_POOL.slice(0, 11), challengerScore: 0 });
     expect(parseFlagMatchChallenge(params)).toBeNull();
+  });
+
+  it("breaks tied scores with fewer mistakes, then a faster run time", () => {
+    expect(getFlagMatchChallengeOutcome({ score: 10, mistakes: 2, durationMs: 90_000 }, BASE_CHALLENGE)).toBe("win");
+    expect(getFlagMatchChallengeOutcome({ score: 10, mistakes: 3, durationMs: 60_000 }, BASE_CHALLENGE)).toBe("win");
+    expect(getFlagMatchChallengeOutcome({ score: 10, mistakes: 3, durationMs: 64_300 }, BASE_CHALLENGE)).toBe("draw");
+    expect(getFlagMatchChallengeOutcome({ score: 10, mistakes: 4, durationMs: 50_000 }, BASE_CHALLENGE)).toBe("loss");
   });
 
   it("keeps a fixed v1 Flag Match sequence for a fixed seed and pool", () => {

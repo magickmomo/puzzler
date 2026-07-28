@@ -25,7 +25,7 @@ import {
   type GameMode,
   type RandomSource,
 } from "@/lib/flag-quiz";
-import { FLAG_MATCH_CHALLENGE_VERSION, createFlagMatchChallengeUrl, orderFlagMatchChallengePool, type FlagMatchChallenge } from "@/lib/flag-challenge";
+import { FLAG_MATCH_CHALLENGE_VERSION, createFlagMatchChallengeUrl, getFlagMatchChallengeOutcome, orderFlagMatchChallengePool, type FlagMatchChallenge } from "@/lib/flag-challenge";
 import { formatSeconds } from "@/lib/player-records";
 import { usePuzzlerStore } from "@/lib/puzzler-store";
 import {
@@ -373,16 +373,15 @@ export function FlagBlitz({
   }
 
   function getShareChallenge(): FlagMatchChallenge | null {
-    if (challenge) return challenge;
     if (!runSeed || gameMode !== "flag-match-unlimited" || !speedMatchUnlimitedTimed || runDurationMs === null) return null;
 
     return {
-      version: FLAG_MATCH_CHALLENGE_VERSION,
-      seed: runSeed,
+      version: challenge?.version ?? FLAG_MATCH_CHALLENGE_VERSION,
+      seed: challenge?.seed ?? runSeed,
       challengerScore: score,
       challengerDurationMs: runDurationMs,
       challengerMistakes: mistakes,
-      countryPool,
+      countryPool: challenge?.countryPool ?? countryPool,
     };
   }
 
@@ -412,7 +411,7 @@ export function FlagBlitz({
 
     const shareData = {
       title: "Flag Marathon challenge",
-      text: `${challenge ? "A challenger found" : "I found"} ${challengeToShare.challengerScore} of ${challengeToShare.countryPool.length} flags in ${formatSeconds(challengeToShare.challengerDurationMs)} with ${challengeToShare.challengerMistakes} mistakes. Can you beat me?`,
+      text: `I found ${challengeToShare.challengerScore} of ${challengeToShare.countryPool.length} flags in ${formatSeconds(challengeToShare.challengerDurationMs)} with ${challengeToShare.challengerMistakes} mistakes. Can you beat me?`,
       url,
     };
 
@@ -466,11 +465,7 @@ export function FlagBlitz({
       void trackFirstGameCompletion("flag_blitz");
     }
     if (challenge && gameMode === "flag-match-unlimited" && speedMatchUnlimitedTimed) {
-      const challengeOutcome = finalScore > challenge.challengerScore
-        ? "win"
-        : finalScore < challenge.challengerScore
-          ? "loss"
-          : "draw";
+      const challengeOutcome = getFlagMatchChallengeOutcome({ score: finalScore, mistakes, durationMs }, challenge);
       void trackFlagMatchChallengeCompleted({
         pool_size: countryPool.length,
         score: finalScore,

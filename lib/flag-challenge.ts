@@ -36,6 +36,14 @@ export type FlagMatchChallenge = {
   countryPool: readonly Country[];
 };
 
+export type FlagMatchChallengeResult = {
+  score: number;
+  mistakes: number;
+  durationMs: number;
+};
+
+export type FlagMatchChallengeOutcome = "win" | "loss" | "draw";
+
 function encodeBase64Url(bytes: Uint8Array): string {
   let encoded = "";
   let buffer = 0;
@@ -160,4 +168,15 @@ export function createFlagMatchChallengeUrl(origin: string, challenge: FlagMatch
   url.searchParams.set("p", encodeV1Pool(challenge.countryPool));
   url.searchParams.set("v", challenge.version);
   return url.toString();
+}
+
+/** Score wins first, then fewer mistakes, then a faster active run time. */
+export function getFlagMatchChallengeOutcome(
+  result: FlagMatchChallengeResult,
+  challenge: FlagMatchChallenge,
+): FlagMatchChallengeOutcome {
+  if (result.score !== challenge.challengerScore) return result.score > challenge.challengerScore ? "win" : "loss";
+  if (result.mistakes !== challenge.challengerMistakes) return result.mistakes < challenge.challengerMistakes ? "win" : "loss";
+  if (result.durationMs !== challenge.challengerDurationMs) return result.durationMs < challenge.challengerDurationMs ? "win" : "loss";
+  return "draw";
 }

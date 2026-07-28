@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { Difficulty, GameMode } from "@/lib/flag-quiz";
 import { formatSeconds } from "@/lib/player-records";
-import type { FlagMatchChallenge } from "@/lib/flag-challenge";
+import { getFlagMatchChallengeOutcome, type FlagMatchChallenge } from "@/lib/flag-challenge";
 
 export function Results({
   gameMode,
@@ -54,11 +54,14 @@ export function Results({
     : isUnlimited
     ? score >= 25 ? "Streak legend!" : score >= 10 ? "Strong run!" : "Keep exploring!"
     : percent >= 75 ? "Map master!" : percent >= 50 ? "Solid run!" : "Keep exploring!";
-  const challengeOutcome = !challenge ? null : score > challenge.challengerScore
-    ? "You beat the challenger!"
-    : score < challenge.challengerScore
-      ? "The challenger keeps the lead."
-      : "It’s a draw.";
+  const challengeOutcome = !challenge || runDurationMs === null ? null : getFlagMatchChallengeOutcome({ score, mistakes, durationMs: runDurationMs }, challenge);
+  const challengeOutcomeMessage = challengeOutcome === null
+    ? null
+    : challengeOutcome === "win"
+      ? "You beat the challenger!"
+      : challengeOutcome === "loss"
+        ? "The challenger keeps the lead."
+        : "It’s a draw.";
   const hasChallengeAction = Boolean(onCopyChallengeLink || (onShareChallenge && canNativeShare));
 
   useEffect(() => {
@@ -111,7 +114,7 @@ export function Results({
             <p className="text-right text-sm font-black text-amber-300">{challenge.challengerMistakes}</p>
             <p className="text-right text-sm font-black text-cyan-300">{mistakes}</p>
           </div>
-          <p className="mt-3 text-sm font-black text-white">{challengeOutcome}</p>
+          <p className="mt-3 text-sm font-black text-white">{challengeOutcomeMessage}</p>
         </section>
       )}
       <div className={`mx-auto mt-8 grid w-full max-w-sm gap-3 ${isSpeedMatch ? "grid-cols-3" : "grid-cols-2"}`}>

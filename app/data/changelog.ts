@@ -14,9 +14,8 @@ export const CHANGELOG_ENTRIES: readonly ChangelogEntry[] = [
     highlights: [
       "Flag Match Unlimited is now Flag Marathon, with sharper match feedback, mistake counts, clearer run results, and a unified game timer.",
       "Flag settings now separate sovereign nations from other flags, with tabs for faster selection.",
-      "Every Flag Blitz run now uses a private seed, making timed Flag Marathon runs reproducible without preloading boards.",
-      "Timed Flag Marathon results can be shared as a challenge: friends receive the same selected flag pool, board, targets, score, time, and mistakes to beat.",
-      "New challenge links let you share a Flag Marathon run with friends, who receive the same flags and targets to beat.",
+      "Every Flag Blitz run now uses a random run seed, making timed Flag Marathon runs reproducible without preloading boards.",
+      "New shareable Flag Marathon challenges send friends the same selected flags and targets, then compare score, mistakes, and time.",
     ],
   },
   {
