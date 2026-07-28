@@ -1,16 +1,22 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { COUNTRIES } from "@/app/data/countries";
+import { COUNTRIES, OTHER_FLAGS, SOVEREIGN_NATIONS, type Country } from "@/app/data/countries";
 import { MINIMUM_ACTIVE_COUNTRIES, getActiveCountries } from "@/lib/puzzler-settings";
 import { usePuzzlerStore } from "@/lib/puzzler-store";
 
 type CountryFilter = "all" | "included" | "excluded";
+type FlagGroup = "sovereign" | "other";
 
 const FILTERS: ReadonlyArray<{ id: CountryFilter; label: string }> = [
   { id: "all", label: "All" },
   { id: "included", label: "Included" },
   { id: "excluded", label: "Excluded" },
+];
+
+const FLAG_GROUPS: ReadonlyArray<{ id: FlagGroup; label: string; description: string }> = [
+  { id: "sovereign", label: "Sovereign nations", description: "UN member states, Vatican City, and Palestine." },
+  { id: "other", label: "Other flags", description: "England, Northern Ireland, Scotland, and Wales." },
 ];
 
 export function Settings({ onBack, onHub }: { onBack: () => void; onHub: () => void }) {
@@ -20,17 +26,21 @@ export function Settings({ onBack, onHub }: { onBack: () => void; onHub: () => v
   const resetSettings = usePuzzlerStore((state) => state.resetFlagBlitzSettings);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<CountryFilter>("all");
+  const [flagGroup, setFlagGroup] = useState<FlagGroup>("sovereign");
   const excludedCodes = useMemo(() => new Set(settings.excludedCountryCodes), [settings.excludedCountryCodes]);
   const activeCount = getActiveCountries(settings.excludedCountryCodes).length;
   const atMinimum = activeCount <= MINIMUM_ACTIVE_COUNTRIES;
   const belowMinimum = activeCount < MINIMUM_ACTIVE_COUNTRIES;
   const normalizedSearch = search.trim().toLowerCase();
-  const countries = COUNTRIES.filter((country) => {
+  function matchesFilters(country: Country) {
     const included = !excludedCodes.has(country.code);
     const matchesFilter = filter === "all" || (filter === "included" ? included : !included);
     const matchesSearch = normalizedSearch.length === 0 || country.name.toLowerCase().includes(normalizedSearch);
     return matchesFilter && matchesSearch;
-  });
+  }
+
+  const selectedGroup = FLAG_GROUPS.find((group) => group.id === flagGroup)!;
+  const countries = (flagGroup === "sovereign" ? SOVEREIGN_NATIONS : OTHER_FLAGS).filter(matchesFilters);
 
   return (
     <main className="mx-auto min-h-[100dvh] w-full max-w-xl px-5 pb-10 pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-8">
@@ -63,7 +73,19 @@ export function Settings({ onBack, onHub }: { onBack: () => void; onHub: () => v
         <button type="button" onClick={resetSettings} className="min-h-12 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm font-black text-white transition hover:border-cyan-300/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">Reset to defaults</button>
       </div>
 
-      <label className="mt-6 block">
+      <div className="mt-6 grid grid-cols-2 gap-2" role="tablist" aria-label="Flag group">
+        {FLAG_GROUPS.map((group) => {
+          const selected = flagGroup === group.id;
+
+          return (
+            <button key={group.id} type="button" role="tab" aria-selected={selected} onClick={() => setFlagGroup(group.id)} className={`min-h-12 rounded-xl border px-3 text-sm font-black transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 ${selected ? "border-cyan-300 bg-cyan-300 text-slate-950" : "border-slate-800 bg-slate-900 text-slate-300 hover:border-cyan-300/50"}`}>
+              {group.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <label className="mt-4 block">
         <span className="sr-only">Search countries</span>
         <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search countries" autoCorrect="off" autoCapitalize="none" className="min-h-12 w-full rounded-xl border border-slate-700 bg-slate-900 px-4 text-base font-semibold text-white placeholder:text-slate-500 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-300/30" />
       </label>
@@ -81,27 +103,34 @@ export function Settings({ onBack, onHub }: { onBack: () => void; onHub: () => v
 
       <section className="mt-6" aria-labelledby="countries-title">
         <div className="flex items-baseline justify-between gap-3">
-          <h2 id="countries-title" className="text-xl font-black text-white">Countries</h2>
-          <p className="text-sm font-bold text-slate-500">{countries.length} shown</p>
+          <div>
+            <h2 id="countries-title" className="text-xl font-black text-white">{selectedGroup.label}</h2>
+            <p className="mt-1 text-sm leading-6 text-slate-400">{selectedGroup.description}</p>
+          </div>
+          <p className="shrink-0 text-sm font-bold text-slate-500">{countries.length} shown</p>
         </div>
-        <ul className="mt-3 space-y-2">
-          {countries.map((country) => {
-            const included = !excludedCodes.has(country.code);
-            const exclusionLocked = included && atMinimum;
+        {countries.length === 0 ? (
+          <p className="mt-4 rounded-2xl border border-slate-800 bg-slate-900/50 px-4 py-3 text-sm font-bold text-slate-400">No matching flags in this group.</p>
+        ) : (
+          <ul className="mt-4 space-y-2">
+            {countries.map((country) => {
+              const included = !excludedCodes.has(country.code);
+              const exclusionLocked = included && atMinimum;
 
-            return (
-              <li key={country.code}>
-                <label className={`flex min-h-14 items-center justify-between gap-4 rounded-2xl border px-4 py-3 transition ${included ? "border-slate-800 bg-slate-900/70" : "border-slate-900 bg-slate-900/35 opacity-70"} ${exclusionLocked ? "cursor-not-allowed" : "cursor-pointer hover:border-cyan-300/40"}`}>
-                  <span className="min-w-0">
-                    <span className="block font-black text-white">{country.name}</span>
-                    <span className={`mt-0.5 block text-xs font-bold ${included ? "text-cyan-300" : "text-slate-500"}`}>{included ? "Included" : "Excluded"}</span>
-                  </span>
-                  <input type="checkbox" checked={included} disabled={exclusionLocked} onChange={(event) => setCountryExcluded(country.code, !event.target.checked)} aria-label={`${included ? "Exclude" : "Include"} ${country.name}`} className="h-6 w-6 shrink-0 accent-cyan-300 disabled:cursor-not-allowed" />
-                </label>
-              </li>
-            );
-          })}
-        </ul>
+              return (
+                <li key={country.code}>
+                  <label className={`flex min-h-14 items-center justify-between gap-4 rounded-2xl border px-4 py-3 transition ${included ? "border-slate-800 bg-slate-900/70" : "border-slate-900 bg-slate-900/35 opacity-70"} ${exclusionLocked ? "cursor-not-allowed" : "cursor-pointer hover:border-cyan-300/40"}`}>
+                    <span className="min-w-0">
+                      <span className="block font-black text-white">{country.name}</span>
+                      <span className={`mt-0.5 block text-xs font-bold ${included ? "text-cyan-300" : "text-slate-500"}`}>{included ? "Included" : "Excluded"}</span>
+                    </span>
+                    <input type="checkbox" checked={included} disabled={exclusionLocked} onChange={(event) => setCountryExcluded(country.code, !event.target.checked)} aria-label={`${included ? "Exclude" : "Include"} ${country.name}`} className="h-6 w-6 shrink-0 accent-cyan-300 disabled:cursor-not-allowed" />
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </section>
     </main>
   );

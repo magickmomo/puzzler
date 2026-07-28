@@ -50,3 +50,10 @@ const COUNTRY_DATA: readonly CountryRecord[] = [
 ];
 
 export const COUNTRIES: readonly Country[] = COUNTRY_DATA.map(([code, name, aliases = []]) => ({ code, name, aliases }));
+
+export const UK_HOME_NATION_CODES = ["gb-eng", "gb-nir", "gb-sct", "gb-wls"] as const;
+
+const UK_HOME_NATION_CODE_SET = new Set<string>(UK_HOME_NATION_CODES);
+
+export const SOVEREIGN_NATIONS = COUNTRIES.filter((country) => !UK_HOME_NATION_CODE_SET.has(country.code));
+export const OTHER_FLAGS = COUNTRIES.filter((country) => UK_HOME_NATION_CODE_SET.has(country.code));

@@ -105,17 +105,12 @@ input {
   }
 }
 
-@keyframes flag-leave {
-  0% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  35% {
-    transform: scale(1.04);
+@keyframes wrong-flag-overlay {
+  0%,
+  65% {
     opacity: 1;
   }
   100% {
-    transform: scale(0.6);
     opacity: 0;
   }
 }
@@ -123,11 +118,80 @@ input {
 @keyframes flag-promote {
   0% {
     transform: translateY(calc(100% + 0.5rem));
-    opacity: 0.15;
   }
   100% {
     transform: translateY(0);
+  }
+}
+
+@keyframes flag-check {
+  0% {
+    transform: scale(0.55);
+    opacity: 0;
+  }
+  20% {
+    transform: scale(1.12);
     opacity: 1;
+  }
+  60% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes flag-reward {
+  0% {
+    transform: translateY(5px) scale(0.8);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-8px) scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes flag-score-pop {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.12);
+  }
+}
+
+@keyframes timer-bonus {
+  0% {
+    transform: translate(-50%, 4px) scale(0.8);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -6px) scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes timer-bonus-inline {
+  0% {
+    transform: translateY(4px) scale(0.8);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-6px) scale(1);
+    opacity: 0;
   }
 }
 
@@ -162,12 +226,32 @@ input {
   animation: answer-error 1.8s ease-out forwards;
 }
 
-.animate-flag-leave {
-  animation: flag-leave 360ms ease-in forwards;
+.animate-wrong-flag-overlay {
+  animation: wrong-flag-overlay 1.8s ease-out forwards;
 }
 
 .animate-flag-promote {
-  animation: flag-promote 380ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: flag-promote 300ms ease-in-out both;
+}
+
+.animate-flag-check {
+  animation: flag-check 600ms ease-out both;
+}
+
+.animate-flag-reward {
+  animation: flag-reward 600ms ease-out both;
+}
+
+.animate-flag-score-pop {
+  animation: flag-score-pop 300ms ease-out;
+}
+
+.animate-timer-bonus {
+  animation: timer-bonus 1s ease-out both;
+}
+
+.animate-timer-bonus-inline {
+  animation: timer-bonus-inline 1s ease-out both;
 }
 
 .animate-wrong-flag {
@@ -179,8 +263,13 @@ input {
   .animate-answer-success,
   .animate-answer-shake,
   .animate-answer-error,
-  .animate-flag-leave,
+  .animate-wrong-flag-overlay,
   .animate-flag-promote,
+  .animate-flag-check,
+  .animate-flag-reward,
+  .animate-flag-score-pop,
+  .animate-timer-bonus,
+  .animate-timer-bonus-inline,
   .animate-wrong-flag {
     animation: none;
   }
