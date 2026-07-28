@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Changelog } from "@/components/Changelog";
 import { trackGameSelected } from "@/lib/analytics";
-import { usePuzzlerStore } from "@/lib/puzzler-store";
 
 type GameCardConfig = {
   id: "flag-blitz" | "capital-cities" | "number-drop";
@@ -158,16 +157,14 @@ function Hub({ onOpenChangelog }: { onOpenChangelog: () => void }) {
 }
 
 export default function PuzzlerApp() {
-  const route = usePuzzlerStore((state) => state.route);
-  const goHome = usePuzzlerStore((state) => state.goHome);
-  const openChangelog = usePuzzlerStore((state) => state.openChangelog);
+  const [view, setView] = useState<"hub" | "changelog">("hub");
 
   return (
     <div className="min-h-[100dvh] bg-slate-950 text-slate-50 antialiased">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top,rgba(8,145,178,0.12),transparent_34rem)]" />
       <div className="relative">
-        {route.screen === "hub" && <Hub onOpenChangelog={openChangelog} />}
-        {route.screen === "changelog" && <Changelog onBack={goHome} />}
+        {view === "hub" && <Hub onOpenChangelog={() => setView("changelog")} />}
+        {view === "changelog" && <Changelog onBack={() => setView("hub")} />}
       </div>
     </div>
   );

@@ -16,10 +16,6 @@ import {
   type PuzzlerSettings,
 } from "./puzzler-settings";
 
-type AppRoute =
-  | { screen: "hub" }
-  | { screen: "changelog" };
-
 export type FlagBlitzProfile = BestScores & {
   totalPlays: number;
   flagStatsByMode: FlagStatsByMode;
@@ -32,16 +28,12 @@ export type CapitalCitiesProfile = {
 };
 
 type PuzzlerStore = {
-  route: AppRoute;
   flagBlitz: FlagBlitzProfile;
   capitalCities: CapitalCitiesProfile;
-  goHome: () => void;
-  openChangelog: () => void;
   recordFlagBlitzPlay: () => void;
   recordFlagBlitzResult: (gameMode: GameMode, score: number, speedMatchCompletionTimeMs?: number) => void;
   recordFlagBlitzAttempt: (gameMode: GameMode, countryCode: string, correct: boolean) => void;
   setFlagBlitzCountryExcluded: (countryCode: string, excluded: boolean) => void;
-  includeAllFlagBlitzCountries: () => void;
   resetFlagBlitzSettings: () => void;
   recordCapitalCitiesPlay: () => void;
   recordCapitalCitiesResult: (timeMs: number) => void;
@@ -140,11 +132,8 @@ export function migratePlayerRecords(persistedState: unknown, version: number): 
 export const usePuzzlerStore = create<PuzzlerStore>()(
   persist(
     (set) => ({
-      route: { screen: "hub" },
       flagBlitz: createDefaultFlagBlitzProfile(),
       capitalCities: createDefaultCapitalCitiesProfile(),
-      goHome: () => set({ route: { screen: "hub" } }),
-      openChangelog: () => set({ route: { screen: "changelog" } }),
       recordFlagBlitzPlay: () => set((state) => ({
         flagBlitz: { ...state.flagBlitz, totalPlays: state.flagBlitz.totalPlays + 1 },
       })),
@@ -167,9 +156,6 @@ export const usePuzzlerStore = create<PuzzlerStore>()(
             excludedCountryCodes: updateCountryExclusion(state.flagBlitz.settings.excludedCountryCodes, countryCode, excluded),
           },
         },
-      })),
-      includeAllFlagBlitzCountries: () => set((state) => ({
-        flagBlitz: { ...state.flagBlitz, settings: createDefaultSettings() },
       })),
       resetFlagBlitzSettings: () => set((state) => ({
         flagBlitz: { ...state.flagBlitz, settings: createDefaultSettings() },

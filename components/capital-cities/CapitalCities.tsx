@@ -19,6 +19,7 @@ import {
   trackReplayStarted,
 } from "@/lib/analytics";
 import { useCookieSettings } from "@/components/analytics/AnalyticsConsentProvider";
+import { GameTimer } from "@/components/GameTimer";
 
 type RoundState = "waiting" | "playing" | "complete";
 type ResolvingPair = {
@@ -248,7 +249,7 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
           <span aria-hidden="true">←</span> Back to Hub
         </button>
         <p className="text-center text-base font-black tracking-tight text-white">Match Capital Cities</p>
-        <time className="min-w-20 text-right text-xl font-black tabular-nums text-violet-300" dateTime={`PT${Math.round(elapsedMs / 1_000)}S`} aria-label={`${formatSeconds(elapsedMs)} elapsed`}>{formatSeconds(elapsedMs)}</time>
+        <GameTimer durationMs={elapsedMs} mode="elapsed" tone="violet" />
       </header>
 
       <section className="flex-none py-7" aria-labelledby="capital-match-title">
