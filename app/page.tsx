@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Changelog } from "@/components/Changelog";
+import { DailyCountryCard } from "@/components/daily-country/DailyCountryCard";
 import { trackGameSelected } from "@/lib/analytics";
 import { usePuzzlerStore } from "@/lib/puzzler-store";
 
@@ -15,6 +16,11 @@ type GameCardConfig = {
   icon: ReactNode;
   available: boolean;
   href?: "/flag-blitz" | "/capital-cities";
+};
+
+type DailyChallengeCardConfig = {
+  id: "daily-country";
+  Component: () => ReactNode;
 };
 
 const SHOW_DEV_GAMES = process.env.NEXT_PUBLIC_PUZZLER_MODE === "dev";
@@ -63,6 +69,10 @@ const GAME_CARDS: readonly GameCardConfig[] = [
     icon: "42",
     available: false,
   },
+];
+
+const DAILY_CHALLENGE_CARDS: readonly DailyChallengeCardConfig[] = [
+  { id: "daily-country", Component: DailyCountryCard },
 ];
 
 function LogoMark() {
@@ -140,11 +150,23 @@ function Hub({ onOpenChangelog }: { onOpenChangelog: () => void }) {
   return (
     <main className="mx-auto min-h-[100dvh] w-full max-w-5xl px-5 pb-10 pt-[max(1.25rem,env(safe-area-inset-top))] sm:px-8">
       <HubHeader onOpenChangelog={onOpenChangelog} />
-      <section aria-labelledby="games-heading">
+      <section aria-labelledby="daily-challenge-heading">
         <div className="mb-5 flex items-end justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold text-slate-500">Quick games. Sharp minds.</p>
-            <h2 id="games-heading" className="mt-1 text-3xl font-black tracking-tight text-white">Choose your challenge</h2>
+            <p className="text-sm font-semibold text-amber-300">One shared puzzle, every day.</p>
+            <h2 id="daily-challenge-heading" className="mt-1 text-3xl font-black tracking-tight text-white">Daily challenge</h2>
+          </div>
+          <span className="hidden rounded-full border border-amber-300/20 px-3 py-2 text-xs font-bold text-amber-200 sm:block">Resets at midnight UTC</span>
+        </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {DAILY_CHALLENGE_CARDS.map(({ id, Component }) => <Component key={id} />)}
+        </div>
+      </section>
+      <section className="mt-12" aria-labelledby="games-heading">
+        <div className="mb-5 flex items-end justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-slate-500">Play whenever you like.</p>
+            <h2 id="games-heading" className="mt-1 text-3xl font-black tracking-tight text-white">Practice arcade</h2>
           </div>
           <span className="hidden rounded-full border border-slate-800 px-3 py-2 text-xs font-bold text-slate-500 sm:block">{SHOW_DEV_GAMES ? "Dev catalog" : "2 games live"}</span>
         </div>

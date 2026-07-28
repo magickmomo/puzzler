@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { GameMode } from "./flag-quiz";
+import type { DailyCountryOutcome, DailyCountryOutcomeStatus } from "./daily-country";
 import {
   createEmptyFlagStatsByMode,
   recordFlagAttempt as updateFlagAttempt,
@@ -31,10 +32,15 @@ export type CapitalCitiesProfile = {
   bestTimeMs: number | null;
 };
 
+export type DailyCountryProfile = {
+  outcomes: Record<string, DailyCountryOutcome>;
+};
+
 type PuzzlerStore = {
   route: AppRoute;
   flagBlitz: FlagBlitzProfile;
   capitalCities: CapitalCitiesProfile;
+  dailyCountry: DailyCountryProfile;
   goHome: () => void;
   openChangelog: () => void;
   recordFlagBlitzPlay: () => void;
@@ -45,6 +51,7 @@ type PuzzlerStore = {
   resetFlagBlitzSettings: () => void;
   recordCapitalCitiesPlay: () => void;
   recordCapitalCitiesResult: (timeMs: number) => void;
+  recordDailyCountryOutcome: (dateKey: string, status: DailyCountryOutcomeStatus, guessesUsed: number) => void;
 };
 
 type LegacyFlagStatsByMode = Partial<Record<GameMode | "speed-match-unlimited", Record<string, FlagAttemptStats>>>;
@@ -73,6 +80,10 @@ export function createDefaultCapitalCitiesProfile(): CapitalCitiesProfile {
   };
 }
 
+export function createDefaultDailyCountryProfile(): DailyCountryProfile {
+  return { outcomes: {} };
+}
+
 type VersionTwoFlagBlitzProfile = Omit<Partial<FlagBlitzProfile>, "flagStatsByMode"> & {
   bestSpeedMatchScore?: number;
   flagStatsByMode?: LegacyFlagStatsByMode;
@@ -91,17 +102,34 @@ function migrateFlagStatsByMode(flagStatsByMode: LegacyFlagStatsByMode | undefin
   };
 }
 
+function migrateDailyCountryProfile(profile: Partial<DailyCountryProfile> | undefined): DailyCountryProfile {
+  const outcomes = Object.fromEntries(Object.entries(profile?.outcomes ?? {}).flatMap(([dateKey, outcome]) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return [];
+    if (!outcome || !["in-progress", "solved", "failed"].includes(outcome.status)) return [];
+
+    return [[dateKey, {
+      status: outcome.status,
+      guessesUsed: Math.max(0, Math.min(6, Math.floor(outcome.guessesUsed))),
+    }]];
+  }));
+
+  return { outcomes };
+}
+
 export function migratePlayerRecords(persistedState: unknown, version: number): {
   flagBlitz: FlagBlitzProfile;
   capitalCities: CapitalCitiesProfile;
+  dailyCountry: DailyCountryProfile;
 } {
   const flagBlitzDefaults = createDefaultFlagBlitzProfile();
   const capitalCitiesDefaults = createDefaultCapitalCitiesProfile();
+  const dailyCountryDefaults = createDefaultDailyCountryProfile();
 
   if (version >= 2) {
     const persisted = persistedState as {
       flagBlitz?: VersionTwoFlagBlitzProfile;
       capitalCities?: Partial<CapitalCitiesProfile>;
+      dailyCountry?: Partial<DailyCountryProfile>;
     };
     const persistedFlagBlitz = persisted.flagBlitz ?? {};
     const { bestSpeedMatchScore: _retiredSpeedScore, ...flagBlitz } = persistedFlagBlitz;
@@ -118,6 +146,7 @@ export function migratePlayerRecords(persistedState: unknown, version: number): 
         ...persisted.capitalCities,
         bestTimeMs: persisted.capitalCities?.bestTimeMs ?? capitalCitiesDefaults.bestTimeMs,
       },
+      dailyCountry: migrateDailyCountryProfile(persisted.dailyCountry ?? dailyCountryDefaults),
     };
   }
 
@@ -134,6 +163,7 @@ export function migratePlayerRecords(persistedState: unknown, version: number): 
       settings: legacy.settings ?? flagBlitzDefaults.settings,
     },
     capitalCities: capitalCitiesDefaults,
+    dailyCountry: dailyCountryDefaults,
   };
 }
 
@@ -143,6 +173,7 @@ export const usePuzzlerStore = create<PuzzlerStore>()(
       route: { screen: "hub" },
       flagBlitz: createDefaultFlagBlitzProfile(),
       capitalCities: createDefaultCapitalCitiesProfile(),
+      dailyCountry: createDefaultDailyCountryProfile(),
       goHome: () => set({ route: { screen: "hub" } }),
       openChangelog: () => set({ route: { screen: "changelog" } }),
       recordFlagBlitzPlay: () => set((state) => ({
@@ -185,12 +216,27 @@ export const usePuzzlerStore = create<PuzzlerStore>()(
             : Math.min(state.capitalCities.bestTimeMs, timeMs),
         },
       })),
+      recordDailyCountryOutcome: (dateKey, status, guessesUsed) => set((state) => ({
+        dailyCountry: {
+          outcomes: {
+            ...state.dailyCountry.outcomes,
+            [dateKey]: {
+              status,
+              guessesUsed: Math.max(0, Math.min(6, Math.floor(guessesUsed))),
+            },
+          },
+        },
+      })),
     }),
     {
       name: "puzzler-player-records",
-      version: 5,
+      version: 6,
       migrate: migratePlayerRecords,
-      partialize: (state) => ({ flagBlitz: state.flagBlitz, capitalCities: state.capitalCities }),
+      partialize: (state) => ({
+        flagBlitz: state.flagBlitz,
+        capitalCities: state.capitalCities,
+        dailyCountry: state.dailyCountry,
+      }),
     },
   ),
 );

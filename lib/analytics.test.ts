@@ -146,6 +146,33 @@ describe("analytics consent gates", () => {
 });
 
 describe("analytics data minimisation", () => {
+  it("accepts the daily country game without permitting typed answers", () => {
+    expect(sanitizePostHogEvent({
+      event: "game_completed",
+      properties: {
+        token: "test-token",
+        distinct_id: "visitor",
+        $process_person_profile: false,
+        game: "daily_country",
+        score: 4,
+        duration_ms: 1_000,
+        progress: 3,
+        answer: "France",
+      },
+    })).toEqual({
+      event: "game_completed",
+      properties: {
+        token: "test-token",
+        distinct_id: "visitor",
+        $process_person_profile: false,
+        game: "daily_country",
+        score: 4,
+        duration_ms: 1_000,
+        progress: 3,
+      },
+    });
+  });
+
   it("only extracts the allowlisted UTM parameters", () => {
     expect(extractCampaignAttribution("?utm_source=facebook&utm_medium=paid&utm_campaign=summer&utm_content=video&utm_term=flags&email=not-allowed&answer=France")).toEqual({
       utm_source: "facebook",

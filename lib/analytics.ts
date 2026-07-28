@@ -28,7 +28,7 @@ export type CampaignAttribution = Partial<{
   utm_term: string;
 }>;
 
-export type AnalyticsGame = "flag_blitz" | "capital_cities";
+export type AnalyticsGame = "flag_blitz" | "capital_cities" | "daily_country";
 export type FlagBlitzMode = "classic" | "unlimited" | "speed-match" | "flag-match-unlimited";
 export type AnalyticsDifficulty = "easy" | "medium" | "hard";
 
@@ -181,7 +181,7 @@ const POSTHOG_REQUIRED_TRANSPORT_PROPERTY_KEYS = new Set([
 ]);
 const SAFE_UTM_VALUE = /^[a-zA-Z0-9._~-]{1,100}$/;
 const SAFE_LANDING_PATH = /^\/(?:[a-z0-9-]+(?:\/[a-z0-9-]+)*)?\/?$/;
-const ANALYTICS_GAMES = new Set<AnalyticsGame>(["flag_blitz", "capital_cities"]);
+const ANALYTICS_GAMES = new Set<AnalyticsGame>(["flag_blitz", "capital_cities", "daily_country"]);
 const FLAG_BLITZ_MODES = new Set<FlagBlitzMode>(["classic", "unlimited", "speed-match", "flag-match-unlimited"]);
 const ANALYTICS_DIFFICULTIES = new Set<AnalyticsDifficulty>(["easy", "medium", "hard"]);
 const WEB_VITAL_PROPERTY_KEYS = new Set([

@@ -32,6 +32,7 @@ describe("player-record migration", () => {
         settings: { excludedCountryCodes: ["br"] },
       },
     });
+    expect(migrated.dailyCountry).toEqual({ outcomes: {} });
   });
 
   it("retires the old score-based Speed Match record from the namespaced format", () => {
@@ -87,5 +88,24 @@ describe("player-record migration", () => {
 
     expect(migrated.flagBlitz.flagStatsByMode["flag-match-unlimited"].br).toEqual({ attempts: 2, correct: 1, wrong: 1 });
     expect(migrated.flagBlitz.flagStatsByMode).not.toHaveProperty("speed-match-unlimited");
+  });
+
+  it("keeps valid daily puzzle outcomes while dropping malformed legacy data", () => {
+    const migrated = migratePlayerRecords({
+      flagBlitz: {},
+      capitalCities: {},
+      dailyCountry: {
+        outcomes: {
+          "2026-07-27": { status: "solved", guessesUsed: 2 },
+          "not-a-date": { status: "failed", guessesUsed: 6 },
+        },
+      },
+    }, 5);
+
+    expect(migrated.dailyCountry).toEqual({
+      outcomes: {
+        "2026-07-27": { status: "solved", guessesUsed: 2 },
+      },
+    });
   });
 });
