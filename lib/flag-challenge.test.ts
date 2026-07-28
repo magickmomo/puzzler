@@ -77,11 +77,10 @@ describe("Flag Match challenges", () => {
     expect(parseFlagMatchChallenge(params)).toBeNull();
   });
 
-  it("breaks tied scores with fewer mistakes, then a faster run time", () => {
-    expect(getFlagMatchChallengeOutcome({ score: 10, mistakes: 2, durationMs: 90_000 }, BASE_CHALLENGE)).toBe("win");
-    expect(getFlagMatchChallengeOutcome({ score: 10, mistakes: 3, durationMs: 60_000 }, BASE_CHALLENGE)).toBe("win");
-    expect(getFlagMatchChallengeOutcome({ score: 10, mistakes: 3, durationMs: 64_300 }, BASE_CHALLENGE)).toBe("draw");
-    expect(getFlagMatchChallengeOutcome({ score: 10, mistakes: 4, durationMs: 50_000 }, BASE_CHALLENGE)).toBe("loss");
+  it("breaks tied scores with fewer mistakes and otherwise draws", () => {
+    expect(getFlagMatchChallengeOutcome({ score: 10, mistakes: 2 }, BASE_CHALLENGE)).toBe("win");
+    expect(getFlagMatchChallengeOutcome({ score: 10, mistakes: 3 }, BASE_CHALLENGE)).toBe("draw");
+    expect(getFlagMatchChallengeOutcome({ score: 10, mistakes: 4 }, BASE_CHALLENGE)).toBe("loss");
   });
 
   it("keeps a fixed v1 Flag Match sequence for a fixed seed and pool", () => {

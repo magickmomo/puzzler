@@ -39,7 +39,6 @@ export type FlagMatchChallenge = {
 export type FlagMatchChallengeResult = {
   score: number;
   mistakes: number;
-  durationMs: number;
 };
 
 export type FlagMatchChallengeOutcome = "win" | "loss" | "draw";
@@ -170,13 +169,12 @@ export function createFlagMatchChallengeUrl(origin: string, challenge: FlagMatch
   return url.toString();
 }
 
-/** Score wins first, then fewer mistakes, then a faster active run time. */
+/** Score wins first, then fewer mistakes. Time remains a comparison statistic. */
 export function getFlagMatchChallengeOutcome(
   result: FlagMatchChallengeResult,
   challenge: FlagMatchChallenge,
 ): FlagMatchChallengeOutcome {
   if (result.score !== challenge.challengerScore) return result.score > challenge.challengerScore ? "win" : "loss";
   if (result.mistakes !== challenge.challengerMistakes) return result.mistakes < challenge.challengerMistakes ? "win" : "loss";
-  if (result.durationMs !== challenge.challengerDurationMs) return result.durationMs < challenge.challengerDurationMs ? "win" : "loss";
   return "draw";
 }

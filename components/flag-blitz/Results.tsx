@@ -54,7 +54,7 @@ export function Results({
     : isUnlimited
     ? score >= 25 ? "Streak legend!" : score >= 10 ? "Strong run!" : "Keep exploring!"
     : percent >= 75 ? "Map master!" : percent >= 50 ? "Solid run!" : "Keep exploring!";
-  const challengeOutcome = !challenge || runDurationMs === null ? null : getFlagMatchChallengeOutcome({ score, mistakes, durationMs: runDurationMs }, challenge);
+  const challengeOutcome = !challenge ? null : getFlagMatchChallengeOutcome({ score, mistakes }, challenge);
   const challengeOutcomeMessage = challengeOutcome === null
     ? null
     : challengeOutcome === "win"

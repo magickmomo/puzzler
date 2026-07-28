@@ -465,7 +465,7 @@ export function FlagBlitz({
       void trackFirstGameCompletion("flag_blitz");
     }
     if (challenge && gameMode === "flag-match-unlimited" && speedMatchUnlimitedTimed) {
-      const challengeOutcome = getFlagMatchChallengeOutcome({ score: finalScore, mistakes, durationMs }, challenge);
+      const challengeOutcome = getFlagMatchChallengeOutcome({ score: finalScore, mistakes }, challenge);
       void trackFlagMatchChallengeCompleted({
         pool_size: countryPool.length,
         score: finalScore,
