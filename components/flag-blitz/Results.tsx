@@ -1,5 +1,9 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import type { Difficulty, GameMode } from "@/lib/flag-quiz";
 import { formatSeconds } from "@/lib/player-records";
+import type { FlagMatchChallenge } from "@/lib/flag-challenge";
 
 export function Results({
   gameMode,
@@ -15,6 +19,9 @@ export function Results({
   onHub,
   secondaryActionLabel = "Back to Hub",
   onSecondaryAction,
+  challenge,
+  onShareChallenge,
+  onCopyChallengeLink,
 }: {
   gameMode: GameMode;
   score: number;
@@ -29,7 +36,12 @@ export function Results({
   onHub: () => void;
   secondaryActionLabel?: string;
   onSecondaryAction?: () => void;
+  challenge?: FlagMatchChallenge;
+  onShareChallenge?: () => Promise<"shared" | "copied" | null>;
+  onCopyChallengeLink?: () => Promise<boolean>;
 }) {
+  const [shareStatus, setShareStatus] = useState<"shared" | "copied" | null>(null);
+  const [canNativeShare, setCanNativeShare] = useState(false);
   const isUnlimited = gameMode === "unlimited";
   const isSpeedMatchUnlimited = gameMode === "flag-match-unlimited";
   const isSpeedMatch = gameMode === "speed-match" || isSpeedMatchUnlimited;
@@ -42,6 +54,28 @@ export function Results({
     : isUnlimited
     ? score >= 25 ? "Streak legend!" : score >= 10 ? "Strong run!" : "Keep exploring!"
     : percent >= 75 ? "Map master!" : percent >= 50 ? "Solid run!" : "Keep exploring!";
+  const challengeOutcome = !challenge ? null : score > challenge.challengerScore
+    ? "You beat the challenger!"
+    : score < challenge.challengerScore
+      ? "The challenger keeps the lead."
+      : "It’s a draw.";
+  const hasChallengeAction = Boolean(onCopyChallengeLink || (onShareChallenge && canNativeShare));
+
+  useEffect(() => {
+    setCanNativeShare(typeof navigator.share === "function");
+  }, []);
+
+  async function shareChallenge() {
+    if (!onShareChallenge) return;
+    setShareStatus(null);
+    setShareStatus(await onShareChallenge());
+  }
+
+  async function copyChallengeLink() {
+    if (!onCopyChallengeLink) return;
+    setShareStatus(null);
+    if (await onCopyChallengeLink()) setShareStatus("copied");
+  }
 
   return (
     <section className="flex flex-1 flex-col justify-center py-10 text-center" aria-labelledby="results-title">
@@ -49,7 +83,9 @@ export function Results({
       <p className="mt-7 text-xs font-black uppercase tracking-[0.25em] text-cyan-300">Run complete</p>
       <h1 id="results-title" className="mt-2 text-4xl font-black tracking-tight text-white">{title}</h1>
       <p className="mx-auto mt-3 max-w-xs text-slate-400">
-        {isSpeedMatchUnlimited
+        {challenge
+          ? `You found ${score} of ${total} flags on the same Flag Match run.`
+          : isSpeedMatchUnlimited
           ? `You found ${score} flags before ending the run.`
           : isSpeedMatch
           ? completedSpeedMatch
@@ -59,6 +95,21 @@ export function Results({
           ? `Your Classic Unlimited run ended on flag ${questionNumber}. One miss ends the streak.`
           : <>You completed <span className="capitalize">{difficulty}</span> mode. Another run could put you on top.</>}
       </p>
+      {challenge && (
+        <section className="mx-auto mt-6 w-full max-w-sm rounded-2xl border border-cyan-300/20 bg-cyan-300/5 p-4" aria-label="Challenge comparison">
+          <div className="grid grid-cols-2 gap-3 text-left">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Challenger</p>
+              <p className="mt-1 text-2xl font-black text-amber-300">{challenge.challengerScore} <span className="text-sm text-slate-500">/ {total}</span></p>
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">You</p>
+              <p className="mt-1 text-2xl font-black text-cyan-300">{score} <span className="text-sm text-slate-500">/ {total}</span></p>
+            </div>
+          </div>
+          <p className="mt-3 text-sm font-black text-white">{challengeOutcome}</p>
+        </section>
+      )}
       <div className={`mx-auto mt-8 grid w-full max-w-sm gap-3 ${isSpeedMatch ? "grid-cols-3" : "grid-cols-2"}`}>
         <div className={`rounded-2xl border border-slate-800 bg-slate-900 ${isSpeedMatch ? "p-4" : "p-5"}`}>
           <p className={`${isSpeedMatch ? "text-2xl" : "text-3xl"} font-black text-white`}>{score}{!isUnlimited && !isSpeedMatchUnlimited && <span className="text-lg text-slate-600">/{total}</span>}</p>
@@ -84,7 +135,10 @@ export function Results({
         )}
       </div>
       <div className="mx-auto mt-8 w-full max-w-sm space-y-3">
-        <button type="button" onClick={onReplay} className="min-h-14 w-full rounded-2xl bg-cyan-300 px-5 font-black text-slate-950 transition hover:bg-cyan-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-100 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">Play again</button>
+        {onShareChallenge && canNativeShare && <button type="button" onClick={shareChallenge} className="min-h-14 w-full rounded-2xl bg-cyan-300 px-5 font-black text-slate-950 transition hover:bg-cyan-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-100 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">Share challenge</button>}
+        {onCopyChallengeLink && <button type="button" onClick={copyChallengeLink} className={`min-h-14 w-full rounded-2xl px-5 font-black transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950 ${canNativeShare ? "border border-slate-700 bg-slate-900 text-white hover:bg-slate-800 focus-visible:ring-slate-400" : "bg-cyan-300 text-slate-950 hover:bg-cyan-200 focus-visible:ring-cyan-100"}`}>Copy challenge link</button>}
+        {shareStatus && <p className="text-center text-sm font-bold text-emerald-300" aria-live="polite">{shareStatus === "copied" ? "Challenge link copied" : "Share sheet opened"}</p>}
+        <button type="button" onClick={onReplay} className={`min-h-14 w-full rounded-2xl px-5 font-black transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950 ${hasChallengeAction ? "border border-slate-700 bg-slate-900 text-white hover:bg-slate-800 focus-visible:ring-slate-400" : "bg-cyan-300 text-slate-950 hover:bg-cyan-200 focus-visible:ring-cyan-100"}`}>Play again</button>
         <button type="button" onClick={onSecondaryAction ?? onHub} className="min-h-14 w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 font-black text-white transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400">{secondaryActionLabel}</button>
       </div>
     </section>
