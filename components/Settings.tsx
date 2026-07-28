@@ -15,7 +15,7 @@ const FILTERS: ReadonlyArray<{ id: CountryFilter; label: string }> = [
 ];
 
 const FLAG_GROUPS: ReadonlyArray<{ id: FlagGroup; label: string; description: string }> = [
-  { id: "sovereign", label: "Sovereign nations", description: "UN member states, Vatican City, and Palestine." },
+  { id: "sovereign", label: "Sovereign nations", description: "United Nations member and observer states." },
   { id: "other", label: "Other flags", description: "England, Northern Ireland, Scotland, and Wales." },
 ];
 
