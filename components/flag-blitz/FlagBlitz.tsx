@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { COUNTRIES, type Country } from "@/app/data/countries";
+import { type Country } from "@/app/data/countries";
 import {
   FLAG_MATCH_TIMED_CORRECT_BONUS_MS,
   createMultipleChoiceOptions,
@@ -25,11 +25,13 @@ import {
   type GameMode,
   type RandomSource,
 } from "@/lib/flag-quiz";
-import { createFlagMatchChallengeUrl, type FlagMatchChallenge } from "@/lib/flag-challenge";
+import { FLAG_MATCH_CHALLENGE_VERSION, createFlagMatchChallengeUrl, orderFlagMatchChallengePool, type FlagMatchChallenge } from "@/lib/flag-challenge";
+import { formatSeconds } from "@/lib/player-records";
 import { usePuzzlerStore } from "@/lib/puzzler-store";
 import {
   getActiveCountries,
   hasMinimumActiveCountries,
+  MINIMUM_ACTIVE_COUNTRIES,
 } from "@/lib/puzzler-settings";
 import {
   trackFirstGameCompletion,
@@ -37,6 +39,11 @@ import {
   trackGameCompleted,
   trackGameStarted,
   trackReplayStarted,
+  trackFlagMatchChallengeCompleted,
+  trackFlagMatchChallengeOpened,
+  trackFlagMatchChallengeReshared,
+  trackFlagMatchChallengeShared,
+  trackFlagMatchChallengeStarted,
   type AnalyticsDifficulty,
 } from "@/lib/analytics";
 import { DifficultySelector } from "./DifficultySelector";
@@ -157,6 +164,7 @@ export function FlagBlitz({
   const pausedRunDurationRef = useRef(0);
   const activeRunRef = useRef(false);
   const randomRef = useRef<RandomSource | null>(null);
+  const challengeOpenedRef = useRef(false);
 
   function clearBoardTransition() {
     if (transitionTimerRef.current !== null) {
@@ -196,6 +204,15 @@ export function FlagBlitz({
   }
 
   useEffect(() => () => clearBoardTransition(), []);
+
+  useEffect(() => {
+    if (!challenge || challengeOpenedRef.current) return;
+    challengeOpenedRef.current = true;
+    void trackFlagMatchChallengeOpened({
+      pool_size: challenge.countryPool.length,
+      challenger_score: challenge.challengerScore,
+    });
+  }, [challenge]);
 
   function getRunDurationMs(): number {
     if (runStartedAtRef.current === null) return 0;
@@ -264,11 +281,13 @@ export function FlagBlitz({
     selectedGameMode: GameMode,
     selectedDifficulty: Difficulty | null,
     timedUnlimited = speedMatchUnlimitedTimed,
-    options: { seed?: string; useGlobalCountryPool?: boolean } = {},
+    options: { seed?: string; countryPool?: readonly Country[] } = {},
   ) {
-    const useGlobalCountryPool = options.useGlobalCountryPool || (selectedGameMode === "flag-match-unlimited" && timedUnlimited);
-    const nextCountryPool = useGlobalCountryPool ? [...COUNTRIES] : getActiveCountries(excludedCountryCodes);
-    if (!useGlobalCountryPool && !hasMinimumActiveCountries(excludedCountryCodes)) {
+    const selectedCountryPool = options.countryPool ? [...options.countryPool] : getActiveCountries(excludedCountryCodes);
+    const nextCountryPool = selectedGameMode === "flag-match-unlimited" && timedUnlimited
+      ? orderFlagMatchChallengePool(selectedCountryPool)
+      : selectedCountryPool;
+    if (nextCountryPool.length < MINIMUM_ACTIVE_COUNTRIES) {
       setRoundState("selecting-mode");
       return;
     }
@@ -334,6 +353,12 @@ export function FlagBlitz({
     recordPlay();
     const context = getTrackingContext(selectedGameMode, selectedDifficulty, timedUnlimited);
     if (context) void trackGameStarted(context);
+    if (challenge && selectedGameMode === "flag-match-unlimited" && timedUnlimited) {
+      void trackFlagMatchChallengeStarted({
+        pool_size: challenge.countryPool.length,
+        challenger_score: challenge.challengerScore,
+      });
+    }
   }
 
   function startGame(selectedDifficulty: Difficulty) {
@@ -343,28 +368,57 @@ export function FlagBlitz({
 
   function startFlagMatchChallenge() {
     beginGame("flag-match-unlimited", null, true, challenge
-      ? { seed: challenge.seed, useGlobalCountryPool: true }
+      ? { seed: challenge.seed, countryPool: challenge.countryPool }
       : undefined);
   }
 
-  function getFlagMatchChallengeUrl(): string | null {
-    if (!runSeed || gameMode !== "flag-match-unlimited" || !speedMatchUnlimitedTimed) return null;
+  function getShareChallenge(): FlagMatchChallenge | null {
+    if (challenge) return challenge;
+    if (!runSeed || gameMode !== "flag-match-unlimited" || !speedMatchUnlimitedTimed || runDurationMs === null) return null;
 
-    return createFlagMatchChallengeUrl(window.location.origin, { seed: runSeed, challengerScore: score });
+    return {
+      version: FLAG_MATCH_CHALLENGE_VERSION,
+      seed: runSeed,
+      challengerScore: score,
+      challengerDurationMs: runDurationMs,
+      challengerMistakes: mistakes,
+      countryPool,
+    };
+  }
+
+  function getFlagMatchChallengeUrl(): string | null {
+    const challengeToShare = getShareChallenge();
+    return challengeToShare ? createFlagMatchChallengeUrl(window.location.origin, challengeToShare) : null;
+  }
+
+  function trackChallengeShare(method: "native" | "copy") {
+    if (runDurationMs === null || !countryPool.length) return;
+    const properties = {
+      pool_size: countryPool.length,
+      score,
+      duration_ms: runDurationMs,
+      mistakes,
+      share_method: method,
+    };
+
+    if (challenge) void trackFlagMatchChallengeReshared(properties);
+    else void trackFlagMatchChallengeShared(properties);
   }
 
   async function shareFlagMatchChallenge(): Promise<"shared" | null> {
     const url = getFlagMatchChallengeUrl();
-    if (!url || !navigator.share) return null;
+    const challengeToShare = getShareChallenge();
+    if (!url || !challengeToShare || !navigator.share) return null;
 
     const shareData = {
       title: "Flag Match challenge",
-      text: `I found ${score} of ${COUNTRIES.length} flags. Can you beat me?`,
+      text: `${challenge ? "A challenger found" : "I found"} ${challengeToShare.challengerScore} of ${challengeToShare.countryPool.length} flags in ${formatSeconds(challengeToShare.challengerDurationMs)} with ${challengeToShare.challengerMistakes} mistakes. Can you beat me?`,
       url,
     };
 
     try {
       await navigator.share(shareData);
+      trackChallengeShare("native");
       return "shared";
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return null;
@@ -374,7 +428,9 @@ export function FlagBlitz({
 
   async function copyFlagMatchChallengeLink(): Promise<boolean> {
     const url = getFlagMatchChallengeUrl();
-    return url ? await copyChallengeLink(url) : false;
+    const copied = url ? await copyChallengeLink(url) : false;
+    if (copied) trackChallengeShare("copy");
+    return copied;
   }
 
   function submitAnswer(value: string) {
@@ -408,6 +464,20 @@ export function FlagBlitz({
         progress: finalScore,
       });
       void trackFirstGameCompletion("flag_blitz");
+    }
+    if (challenge && gameMode === "flag-match-unlimited" && speedMatchUnlimitedTimed) {
+      const challengeOutcome = finalScore > challenge.challengerScore
+        ? "win"
+        : finalScore < challenge.challengerScore
+          ? "loss"
+          : "draw";
+      void trackFlagMatchChallengeCompleted({
+        pool_size: countryPool.length,
+        score: finalScore,
+        duration_ms: durationMs,
+        mistakes,
+        challenge_outcome: challengeOutcome,
+      });
     }
     setRoundState("results");
   }
@@ -678,7 +748,7 @@ export function FlagBlitz({
           <h1 id="flag-match-challenge-title" className="mt-2 text-4xl font-black tracking-tight text-white">{challenge ? "Beat the challenger" : "Flag Match: 60-Second Challenge"}</h1>
           <p className="mx-auto mt-3 max-w-sm text-base leading-7 text-slate-400">
             {challenge
-              ? <>They found <span className="font-black text-amber-300">{challenge.challengerScore} of {COUNTRIES.length}</span> flags. You&apos;ll get the exact same board and targets.</>
+              ? <>They found <span className="font-black text-amber-300">{challenge.challengerScore} of {challenge.countryPool.length}</span> flags in {formatSeconds(challenge.challengerDurationMs)} with {challenge.challengerMistakes} {challenge.challengerMistakes === 1 ? "mistake" : "mistakes"}. You&apos;ll get the exact same board and targets.</>
               : "Find the named country’s flag. Every correct answer adds two seconds."}
           </p>
           <button type="button" autoFocus onClick={startFlagMatchChallenge} disabled={!challenge && !hasMinimumActiveCountries(excludedCountryCodes)} className="mx-auto mt-8 min-h-14 w-full max-w-sm rounded-2xl bg-cyan-300 px-5 font-black text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-100 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">Start challenge</button>
@@ -692,7 +762,7 @@ export function FlagBlitz({
           <p className="text-xs font-black uppercase tracking-[0.25em] text-cyan-300">Flag Match Unlimited</p>
           <h1 id="timer-choice-title" className="mt-2 text-4xl font-black tracking-tight text-white">Choose your timer</h1>
           <div className="mx-auto mt-8 w-full max-w-sm space-y-3">
-            <button type="button" autoFocus onClick={() => beginGame("flag-match-unlimited", null, true)} className="group min-h-16 w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 text-left font-black text-white transition hover:border-cyan-300 hover:bg-cyan-300 hover:text-slate-950 focus:outline-none focus-visible:border-cyan-300 focus-visible:bg-cyan-300 focus-visible:text-slate-950 focus-visible:ring-2 focus-visible:ring-cyan-100 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">60-second timer<span className="mt-1 block text-sm font-semibold text-slate-500 transition group-hover:text-slate-700 group-focus-visible:text-slate-700">Every correct flag adds 2 seconds.</span></button>
+            <button type="button" autoFocus onClick={() => beginGame("flag-match-unlimited", null, true)} className="group min-h-16 w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 text-left font-black text-white transition hover:border-cyan-300 hover:bg-cyan-300 hover:text-slate-950 focus:outline-none focus-visible:border-cyan-300 focus-visible:bg-cyan-300 focus-visible:text-slate-950 focus-visible:ring-2 focus-visible:ring-cyan-100 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">60-second timer<span className="mt-1 block text-sm font-semibold text-slate-500 transition group-hover:text-slate-700 group-focus-visible:text-slate-700">Every correct flag adds 2 seconds. Shared challenges use this selected flag pool.</span></button>
             <button type="button" onClick={() => beginGame("flag-match-unlimited", null, false)} className="group min-h-16 w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 text-left font-black text-white transition hover:border-cyan-300 hover:bg-cyan-300 hover:text-slate-950 focus:outline-none focus-visible:border-cyan-300 focus-visible:bg-cyan-300 focus-visible:text-slate-950 focus-visible:ring-2 focus-visible:ring-cyan-100 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">No timer<span className="mt-1 block text-sm font-semibold text-slate-500 transition group-hover:text-slate-700 group-focus-visible:text-slate-700">Play until you save the run.</span></button>
             <button type="button" onClick={() => setRoundState("selecting-mode")} className="min-h-12 w-full rounded-2xl px-5 font-black text-slate-400 transition hover:bg-slate-900 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300">Back to modes</button>
           </div>
@@ -755,7 +825,7 @@ export function FlagBlitz({
             const context = getTrackingContext();
             if (context) void trackReplayStarted(context);
             beginGame(gameMode, difficulty, speedMatchUnlimitedTimed, challenge
-              ? { seed: challenge.seed, useGlobalCountryPool: true }
+              ? { seed: challenge.seed, countryPool: challenge.countryPool }
               : undefined);
           }}
           onHub={onBack}
@@ -770,7 +840,7 @@ export function FlagBlitz({
         <PauseOverlay
           onResume={resumeGame}
           onRestart={() => beginGame(gameMode, difficulty, speedMatchUnlimitedTimed, challenge
-            ? { seed: challenge.seed, useGlobalCountryPool: true }
+            ? { seed: challenge.seed, countryPool: challenge.countryPool }
             : undefined)}
           onEndRun={finishGame}
           onHub={abandonGame}

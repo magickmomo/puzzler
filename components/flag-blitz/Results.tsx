@@ -97,15 +97,19 @@ export function Results({
       </p>
       {challenge && (
         <section className="mx-auto mt-6 w-full max-w-sm rounded-2xl border border-cyan-300/20 bg-cyan-300/5 p-4" aria-label="Challenge comparison">
-          <div className="grid grid-cols-2 gap-3 text-left">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Challenger</p>
-              <p className="mt-1 text-2xl font-black text-amber-300">{challenge.challengerScore} <span className="text-sm text-slate-500">/ {total}</span></p>
-            </div>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">You</p>
-              <p className="mt-1 text-2xl font-black text-cyan-300">{score} <span className="text-sm text-slate-500">/ {total}</span></p>
-            </div>
+          <div className="grid grid-cols-[auto_1fr_1fr] gap-x-3 gap-y-2 text-left">
+            <span />
+            <p className="text-right text-xs font-bold uppercase tracking-wider text-slate-500">Challenger</p>
+            <p className="text-right text-xs font-bold uppercase tracking-wider text-slate-500">You</p>
+            <p className="text-sm font-bold text-slate-400">Flags</p>
+            <p className="text-right text-lg font-black text-amber-300">{challenge.challengerScore} <span className="text-sm text-slate-500">/ {total}</span></p>
+            <p className="text-right text-lg font-black text-cyan-300">{score} <span className="text-sm text-slate-500">/ {total}</span></p>
+            <p className="text-sm font-bold text-slate-400">Time</p>
+            <p className="text-right text-sm font-black text-amber-300">{formatSeconds(challenge.challengerDurationMs)}</p>
+            <p className="text-right text-sm font-black text-cyan-300">{formatSeconds(runDurationMs)}</p>
+            <p className="text-sm font-bold text-slate-400">Mistakes</p>
+            <p className="text-right text-sm font-black text-amber-300">{challenge.challengerMistakes}</p>
+            <p className="text-right text-sm font-black text-cyan-300">{mistakes}</p>
           </div>
           <p className="mt-3 text-sm font-black text-white">{challengeOutcome}</p>
         </section>
