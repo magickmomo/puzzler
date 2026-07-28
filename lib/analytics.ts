@@ -66,6 +66,29 @@ export type AnalyticsEventProperties = {
     difficulty?: AnalyticsDifficulty;
     timer_enabled?: boolean;
   };
+  flag_match_challenge_opened: { pool_size: number; challenger_score: number };
+  flag_match_challenge_started: { pool_size: number; challenger_score: number };
+  flag_match_challenge_completed: {
+    pool_size: number;
+    score: number;
+    duration_ms: number;
+    mistakes: number;
+    challenge_outcome: "win" | "loss" | "draw";
+  };
+  flag_match_challenge_shared: {
+    pool_size: number;
+    score: number;
+    duration_ms: number;
+    mistakes: number;
+    share_method: "native" | "copy";
+  };
+  flag_match_challenge_reshared: {
+    pool_size: number;
+    score: number;
+    duration_ms: number;
+    mistakes: number;
+    share_method: "native" | "copy";
+  };
   first_game_completed: { game: AnalyticsGame };
 };
 
@@ -148,6 +171,11 @@ const ANALYTICS_EVENT_NAMES = [
   "game_completed",
   "game_abandoned",
   "replay_started",
+  "flag_match_challenge_opened",
+  "flag_match_challenge_started",
+  "flag_match_challenge_completed",
+  "flag_match_challenge_shared",
+  "flag_match_challenge_reshared",
   "first_game_completed",
 ] as const satisfies readonly AnalyticsEventName[];
 
@@ -167,6 +195,10 @@ const ANALYTICS_EVENT_PROPERTY_KEYS = new Set<string>([
   "duration_ms",
   "mistakes",
   "progress",
+  "pool_size",
+  "challenger_score",
+  "challenge_outcome",
+  "share_method",
   "landing_path",
   ...CAMPAIGN_PARAMETERS,
 ]);
@@ -267,7 +299,9 @@ function isSafeAnalyticsProperty(key: string, value: unknown): value is Analytic
   if (key === "difficulty") return typeof value === "string" && ANALYTICS_DIFFICULTIES.has(value as AnalyticsDifficulty);
   if (key === "landing_path" || key === "page_path") return typeof value === "string" && SAFE_LANDING_PATH.test(value);
   if (key === "timer_enabled") return typeof value === "boolean";
-  if (key === "score" || key === "duration_ms" || key === "mistakes" || key === "progress") {
+  if (key === "challenge_outcome") return value === "win" || value === "loss" || value === "draw";
+  if (key === "share_method") return value === "native" || value === "copy";
+  if (key === "score" || key === "duration_ms" || key === "mistakes" || key === "progress" || key === "pool_size" || key === "challenger_score") {
     return typeof value === "number" && Number.isFinite(value) && value >= 0;
   }
   if (WEB_VITAL_PROPERTY_KEYS.has(key)) return typeof value === "number" && Number.isFinite(value) && value >= 0;
@@ -749,6 +783,26 @@ export function trackGameAbandoned(properties: AnalyticsEventProperties["game_ab
 
 export function trackReplayStarted(properties: AnalyticsEventProperties["replay_started"]): Promise<void> {
   return browserAnalytics.track("replay_started", properties);
+}
+
+export function trackFlagMatchChallengeOpened(properties: AnalyticsEventProperties["flag_match_challenge_opened"]): Promise<void> {
+  return browserAnalytics.track("flag_match_challenge_opened", properties);
+}
+
+export function trackFlagMatchChallengeStarted(properties: AnalyticsEventProperties["flag_match_challenge_started"]): Promise<void> {
+  return browserAnalytics.track("flag_match_challenge_started", properties);
+}
+
+export function trackFlagMatchChallengeCompleted(properties: AnalyticsEventProperties["flag_match_challenge_completed"]): Promise<void> {
+  return browserAnalytics.track("flag_match_challenge_completed", properties);
+}
+
+export function trackFlagMatchChallengeShared(properties: AnalyticsEventProperties["flag_match_challenge_shared"]): Promise<void> {
+  return browserAnalytics.track("flag_match_challenge_shared", properties);
+}
+
+export function trackFlagMatchChallengeReshared(properties: AnalyticsEventProperties["flag_match_challenge_reshared"]): Promise<void> {
+  return browserAnalytics.track("flag_match_challenge_reshared", properties);
 }
 
 export function trackFirstGameCompletion(game: AnalyticsGame): Promise<void> {

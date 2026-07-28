@@ -332,6 +332,37 @@ describe("analytics data minimisation", () => {
       },
     });
   });
+
+  it("allows challenge funnel statistics but never the seed, pool, or query data", () => {
+    expect(sanitizePostHogEvent({
+      event: "flag_match_challenge_completed",
+      properties: {
+        token: "project-token",
+        distinct_id: "anonymous-id",
+        "$process_person_profile": false,
+        pool_size: 42,
+        score: 18,
+        duration_ms: 64_300,
+        mistakes: 3,
+        challenge_outcome: "win",
+        seed: "8f92a1bc1a2b3c4d",
+        p: "encoded-country-pool",
+        query: "?seed=8f92a1bc1a2b3c4d",
+      },
+    })).toEqual({
+      event: "flag_match_challenge_completed",
+      properties: {
+        token: "project-token",
+        distinct_id: "anonymous-id",
+        "$process_person_profile": false,
+        pool_size: 42,
+        score: 18,
+        duration_ms: 64_300,
+        mistakes: 3,
+        challenge_outcome: "win",
+      },
+    });
+  });
 });
 
 describe("analytics event delivery guards", () => {

@@ -1,8 +1,6 @@
 import type { FormEvent } from "react";
-import { useMemo } from "react";
 import type { Country } from "@/app/data/countries";
 import {
-  createMultipleChoiceOptions,
   getCountryHint,
   getNextRoundAction,
   type Difficulty,
@@ -18,7 +16,7 @@ export function QuizRound({
   gameMode,
   difficulty,
   questions,
-  countryPool,
+  multipleChoiceOptions,
   index,
   questionNumber,
   answer,
@@ -33,7 +31,7 @@ export function QuizRound({
   gameMode: GameMode;
   difficulty: Difficulty;
   questions: Country[];
-  countryPool: Country[];
+  multipleChoiceOptions: Country[];
   index: number;
   questionNumber: number;
   answer: string;
@@ -46,7 +44,6 @@ export function QuizRound({
   onNext: () => void;
 }) {
   const question = questions[index];
-  const options = useMemo(() => createMultipleChoiceOptions(question, countryPool), [countryPool, question]);
   const action = getNextRoundAction({
     gameMode,
     correct: wasCorrect ?? false,
@@ -82,7 +79,7 @@ export function QuizRound({
       <div className="pb-[max(0.25rem,env(safe-area-inset-bottom))]">
         {difficulty === "easy" ? (
           <MultipleChoice
-            options={options}
+            options={multipleChoiceOptions}
             answer={answer}
             correctAnswer={question.name}
             disabled={answered}

@@ -9,6 +9,8 @@ export type ScoreState = {
   streak: number;
 };
 
+export type RandomSource = () => number;
+
 export const QUESTIONS_PER_GAME = 10;
 export const SPEED_MATCH_TIME_LIMIT_MS = 60_000;
 export const FLAG_MATCH_TIMED_CORRECT_BONUS_MS = 2_000;
@@ -32,20 +34,44 @@ export function extendDeadline(deadline: number, additionalDuration: number): nu
   return deadline + Math.max(0, additionalDuration);
 }
 
-export function shuffle<T>(items: readonly T[]): T[] {
+export function createRunSeed(): string {
+  const values = new Uint32Array(2);
+  globalThis.crypto.getRandomValues(values);
+  return Array.from(values, (value) => value.toString(16).padStart(8, "0")).join("");
+}
+
+export function createSeededRandom(seed: string): RandomSource {
+  let low = Number.parseInt(seed.slice(0, 8), 16) >>> 0;
+  let high = Number.parseInt(seed.slice(8, 16), 16) >>> 0;
+  if (low === 0 && high === 0) high = 1;
+
+  return () => {
+    low = (low + 0x6D2B79F5) >>> 0;
+    high ^= high << 13;
+    high ^= high >>> 17;
+    high ^= high << 5;
+    high >>>= 0;
+    let value = (low ^ high) >>> 0;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4_294_967_296;
+  };
+}
+
+export function shuffle<T>(items: readonly T[], random: RandomSource = Math.random): T[] {
   return [...items]
-    .map((item) => ({ item, order: Math.random() }))
+    .map((item) => ({ item, order: random() }))
     .sort((a, b) => a.order - b.order)
     .map(({ item }) => item);
 }
 
-export function createQuestionDeck(gameMode: GameMode, countries: readonly Country[] = COUNTRIES): Country[] {
-  const deck = shuffle(countries);
+export function createQuestionDeck(gameMode: GameMode, countries: readonly Country[] = COUNTRIES, random: RandomSource = Math.random): Country[] {
+  const deck = shuffle(countries, random);
   return gameMode === "unlimited" || gameMode === "flag-match-unlimited" ? deck : deck.slice(0, QUESTIONS_PER_GAME);
 }
 
-export function createSpeedMatchTargetDeck(board: readonly Country[]): Country[] {
-  const targets = shuffle(board);
+export function createSpeedMatchTargetDeck(board: readonly Country[], random: RandomSource = Math.random): Country[] {
+  const targets = shuffle(board, random);
 
   if (targets.length < 2 || targets.some((country, index) => country.code !== board[index]?.code)) {
     return targets;
@@ -54,8 +80,8 @@ export function createSpeedMatchTargetDeck(board: readonly Country[]): Country[]
   return [...targets.slice(1), targets[0]];
 }
 
-export function pickSpeedMatchTarget(visibleFlags: readonly Country[]): Country | null {
-  return shuffle(visibleFlags)[0] ?? null;
+export function pickSpeedMatchTarget(visibleFlags: readonly Country[], random: RandomSource = Math.random): Country | null {
+  return shuffle(visibleFlags, random)[0] ?? null;
 }
 
 export function createSpeedMatchUnlimitedColumns(visibleFlags: readonly Country[]): Country[][] {
@@ -64,9 +90,9 @@ export function createSpeedMatchUnlimitedColumns(visibleFlags: readonly Country[
   ));
 }
 
-export function createMultipleChoiceOptions(question: Country, countries: readonly Country[] = COUNTRIES): Country[] {
-  const distractors = shuffle(countries.filter((country) => country.code !== question.code)).slice(0, 3);
-  return shuffle([question, ...distractors]);
+export function createMultipleChoiceOptions(question: Country, countries: readonly Country[] = COUNTRIES, random: RandomSource = Math.random): Country[] {
+  const distractors = shuffle(countries.filter((country) => country.code !== question.code), random).slice(0, 3);
+  return shuffle([question, ...distractors], random);
 }
 
 export function normalizeAnswer(value: string): string {
