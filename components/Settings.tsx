@@ -22,7 +22,6 @@ const FLAG_GROUPS: ReadonlyArray<{ id: FlagGroup; label: string; description: st
 export function Settings({ onBack, onHub }: { onBack: () => void; onHub: () => void }) {
   const settings = usePuzzlerStore((state) => state.flagBlitz.settings);
   const setCountryExcluded = usePuzzlerStore((state) => state.setFlagBlitzCountryExcluded);
-  const includeAllCountries = usePuzzlerStore((state) => state.includeAllFlagBlitzCountries);
   const resetSettings = usePuzzlerStore((state) => state.resetFlagBlitzSettings);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<CountryFilter>("all");
@@ -68,17 +67,16 @@ export function Settings({ onBack, onHub }: { onBack: () => void; onHub: () => v
         {!belowMinimum && atMinimum && <p className="mt-3 rounded-xl bg-amber-300/10 px-3 py-2 text-sm font-bold text-amber-100">Minimum reached. Include a flag before excluding another.</p>}
       </section>
 
-      <div className="mt-5 grid grid-cols-2 gap-3">
-        <button type="button" onClick={includeAllCountries} className="min-h-12 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm font-black text-white transition hover:border-cyan-300/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">Include all</button>
+      <div className="mt-5">
         <button type="button" onClick={resetSettings} className="min-h-12 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm font-black text-white transition hover:border-cyan-300/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">Reset to defaults</button>
       </div>
 
-      <div className="mt-6 grid grid-cols-2 gap-2" role="tablist" aria-label="Flag group">
+      <div className="mt-6 grid grid-cols-2 gap-2">
         {FLAG_GROUPS.map((group) => {
           const selected = flagGroup === group.id;
 
           return (
-            <button key={group.id} type="button" role="tab" aria-selected={selected} onClick={() => setFlagGroup(group.id)} className={`min-h-12 rounded-xl border px-3 text-sm font-black transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 ${selected ? "border-cyan-300 bg-cyan-300 text-slate-950" : "border-slate-800 bg-slate-900 text-slate-300 hover:border-cyan-300/50"}`}>
+            <button key={group.id} type="button" aria-pressed={selected} onClick={() => setFlagGroup(group.id)} className={`min-h-12 rounded-xl border px-3 text-sm font-black transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 ${selected ? "border-cyan-300 bg-cyan-300 text-slate-950" : "border-slate-800 bg-slate-900 text-slate-300 hover:border-cyan-300/50"}`}>
               {group.label}
             </button>
           );

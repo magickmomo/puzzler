@@ -49,10 +49,6 @@ export function SpeedMatchRound({
     const position = fillsSlot ? "absolute inset-0" : "relative aspect-[4/3] min-h-14";
     const base = `${position} overflow-hidden border p-1.5 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300`;
 
-    if (removingCode === country.code) {
-      return `${base} animate-flag-leave border-emerald-300 bg-emerald-400/25`;
-    }
-
     if (matchedCodes.includes(country.code)) {
       return `${base} animate-answer-success border-emerald-300 bg-emerald-400/25`;
     }
@@ -67,7 +63,6 @@ export function SpeedMatchRound({
   function renderFlagButton(country: Country, index: number, isPromoted = false, fillsSlot = false) {
     const isMatched = matchedCodes.includes(country.code);
     const isIncorrect = incorrectCodes.includes(country.code);
-    const isLeaving = removingCode === country.code;
 
     return (
       <button
@@ -76,7 +71,7 @@ export function SpeedMatchRound({
         disabled={isMatched || isIncorrect || removingCode !== null || timeLeft === 0}
         onClick={() => onSelect(country)}
         className={tileClassName(country, isPromoted, fillsSlot)}
-        aria-label={isLeaving || isMatched ? `Flag option ${index + 1}, correct` : isIncorrect ? `Flag option ${index + 1}, ${country.name}, incorrect` : `Flag option ${index + 1}`}
+        aria-label={isMatched ? `Flag option ${index + 1}, correct` : isIncorrect ? `Flag option ${index + 1}, ${country.name}, incorrect` : `Flag option ${index + 1}`}
       >
         <Image
           src={`https://flagcdn.com/${country.code}.svg`}
@@ -136,7 +131,7 @@ export function SpeedMatchRound({
         <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Find this country</p>
         <h1 id="speed-match-target" aria-live="polite" className="mt-2 text-3xl font-black tracking-tight text-white">{target.name}</h1>
         <p className="mt-2 min-h-6 text-base font-black text-rose-300" aria-live="polite" aria-atomic="true">
-          {isUnlimited && correctFeedbackVisible
+          {isUnlimited && timeLeft !== null && correctFeedbackVisible
             ? <span key={correctFeedbackId} aria-hidden="true" className="animate-flag-reward inline-block text-emerald-300">+2</span>
             : wrongFlagName && <span className="animate-wrong-flag">That was {wrongFlagName}</span>}
         </p>

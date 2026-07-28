@@ -115,6 +115,21 @@ input {
   }
 }
 
+@keyframes flag-leave {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  35% {
+    transform: scale(1.04);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+}
+
 @keyframes flag-promote {
   0% {
     transform: translateY(calc(100% + 0.5rem));
@@ -230,6 +245,10 @@ input {
   animation: wrong-flag-overlay 1.8s ease-out forwards;
 }
 
+.animate-flag-leave {
+  animation: flag-leave 360ms ease-in forwards;
+}
+
 .animate-flag-promote {
   animation: flag-promote 300ms ease-in-out both;
 }
@@ -264,6 +283,7 @@ input {
   .animate-answer-shake,
   .animate-answer-error,
   .animate-wrong-flag-overlay,
+  .animate-flag-leave,
   .animate-flag-promote,
   .animate-flag-check,
   .animate-flag-reward,
