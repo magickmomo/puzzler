@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  ANALYTICS_VISITOR_STORAGE_KEY,
   CAMPAIGN_STORAGE_KEY,
   FIRST_COMPLETION_STORAGE_KEY,
   createFacebookPixelQueue,
@@ -25,16 +26,23 @@ function createMemoryStorage() {
   };
 }
 
-function createTestAnalytics() {
+function createTestAnalytics({
+  storage = createMemoryStorage(),
+  visitorIds = ["59b8a82b-a0ca-4d26-9e26-ca4130d586d5"],
+}: {
+  storage?: ReturnType<typeof createMemoryStorage>;
+  visitorIds?: string[];
+} = {}) {
   const posthogCalls: Array<{ type: string; event?: string; properties?: Record<string, string | number | boolean>; options?: unknown }> = [];
   const metaCalls: Array<{ type: string; game?: string }> = [];
-  const storage = createMemoryStorage();
+  let generatedVisitorIdCount = 0;
   let posthogLoads = 0;
   let metaLoads = 0;
 
   const dependencies: AnalyticsDependencies = {
     storage,
     getPageOrigin: () => "https://puzzler.example",
+    generateVisitorId: () => visitorIds[generatedVisitorIdCount++] ?? null,
     loadPostHog: async () => {
       posthogLoads += 1;
       return {
@@ -70,6 +78,7 @@ function createTestAnalytics() {
     metaCalls,
     getPosthogLoads: () => posthogLoads,
     getMetaLoads: () => metaLoads,
+    getGeneratedVisitorIdCount: () => generatedVisitorIdCount,
   };
 }
 
@@ -94,6 +103,43 @@ describe("analytics consent gates", () => {
     expect(analytics.getPosthogLoads()).toBe(1);
     expect(analytics.getMetaLoads()).toBe(0);
     expect(analytics.posthogCalls.some((call) => call.event === "game_selected")).toBe(true);
+  });
+
+  it("creates a persistent anonymous visitor ID only after Analytics consent", async () => {
+    const analytics = createTestAnalytics();
+
+    await analytics.client.setConsent({ analytics: false, marketing: true });
+    expect(analytics.storage.getItem(ANALYTICS_VISITOR_STORAGE_KEY)).toBeNull();
+    expect(analytics.getGeneratedVisitorIdCount()).toBe(0);
+
+    await analytics.client.setConsent({ analytics: true, marketing: true });
+
+    expect(analytics.storage.getItem(ANALYTICS_VISITOR_STORAGE_KEY)).toBe("59b8a82b-a0ca-4d26-9e26-ca4130d586d5");
+    const initCall = analytics.posthogCalls.find((call) => call.type === "init");
+    expect(initCall?.options).toMatchObject({
+      bootstrap: {
+        distinctID: "59b8a82b-a0ca-4d26-9e26-ca4130d586d5",
+        isIdentifiedID: false,
+      },
+      person_profiles: "never",
+    });
+  });
+
+  it("reuses the same visitor ID for a later Analytics-consented visit", async () => {
+    const storage = createMemoryStorage();
+    const firstVisit = createTestAnalytics({ storage });
+    await firstVisit.client.setConsent({ analytics: true, marketing: false });
+
+    const laterVisit = createTestAnalytics({
+      storage,
+      visitorIds: ["b2a62717-a41f-4628-af87-5507731b8d6e"],
+    });
+    await laterVisit.client.setConsent({ analytics: true, marketing: false });
+
+    expect(laterVisit.getGeneratedVisitorIdCount()).toBe(0);
+    expect(laterVisit.posthogCalls.find((call) => call.type === "init")?.options).toMatchObject({
+      bootstrap: { distinctID: "59b8a82b-a0ca-4d26-9e26-ca4130d586d5", isIdentifiedID: false },
+    });
   });
 
   it("loads only Meta for Marketing-only consent", async () => {
@@ -130,6 +176,23 @@ describe("analytics consent gates", () => {
     expect(analytics.posthogCalls.filter((call) => call.event === "game_selected")).toHaveLength(1);
     expect(analytics.posthogCalls.some((call) => call.type === "reset")).toBe(true);
     expect(analytics.posthogCalls.some((call) => call.type === "opt_out")).toBe(true);
+    expect(analytics.storage.getItem(ANALYTICS_VISITOR_STORAGE_KEY)).toBeNull();
+  });
+
+  it("uses a fresh visitor ID after Analytics consent is withdrawn and granted again", async () => {
+    const analytics = createTestAnalytics({
+      visitorIds: [
+        "59b8a82b-a0ca-4d26-9e26-ca4130d586d5",
+        "b2a62717-a41f-4628-af87-5507731b8d6e",
+      ],
+    });
+
+    await analytics.client.setConsent({ analytics: true, marketing: false });
+    await analytics.client.setConsent({ analytics: false, marketing: false });
+    await analytics.client.setConsent({ analytics: true, marketing: false });
+
+    expect(analytics.storage.getItem(ANALYTICS_VISITOR_STORAGE_KEY)).toBe("b2a62717-a41f-4628-af87-5507731b8d6e");
+    expect(analytics.getGeneratedVisitorIdCount()).toBe(2);
   });
 
   it("revokes Meta and does not send a later page view when Marketing consent is withdrawn", async () => {

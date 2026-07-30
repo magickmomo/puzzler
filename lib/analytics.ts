@@ -10,6 +10,7 @@
 export const CONSENT_STORAGE_KEY = "puzzler-consent-v1";
 export const CAMPAIGN_STORAGE_KEY = "puzzler-campaign-v1";
 export const FIRST_COMPLETION_STORAGE_KEY = "puzzler-first-game-completed-v1";
+export const ANALYTICS_VISITOR_STORAGE_KEY = "puzzler-analytics-visitor-v1";
 
 export type ConsentPreferences = {
   analytics: boolean;
@@ -138,6 +139,10 @@ type PostHogOptions = {
   persistence: "memory";
   disable_persistence: true;
   person_profiles: "never";
+  bootstrap?: {
+    distinctID: string;
+    isIdentifiedID: false;
+  };
   before_send: (payload: PostHogCapturePayload) => PostHogCapturePayload | null;
 };
 
@@ -160,6 +165,7 @@ export type AnalyticsDependencies = {
   loadPostHog?: () => Promise<PostHogClient>;
   loadMetaPixel?: (pixelId: string) => Promise<MetaClient>;
   getPageOrigin?: () => string | undefined;
+  generateVisitorId?: () => string | null;
 };
 
 type CompletionDelivery = Partial<Record<"posthog" | "meta", true>>;
@@ -225,6 +231,7 @@ const POSTHOG_REQUIRED_TRANSPORT_PROPERTY_KEYS = new Set([
 ]);
 const SAFE_UTM_VALUE = /^[a-zA-Z0-9._~-]{1,100}$/;
 const SAFE_LANDING_PATH = /^\/(?:[a-z0-9-]+(?:\/[a-z0-9-]+)*)?\/?$/;
+const SAFE_VISITOR_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ANALYTICS_GAMES = new Set<AnalyticsGame>(["flag_blitz", "capital_cities"]);
 const FLAG_BLITZ_MODES = new Set<FlagBlitzMode>(["classic", "unlimited", "speed-match", "flag-match-unlimited"]);
 const ANALYTICS_DIFFICULTIES = new Set<AnalyticsDifficulty>(["easy", "medium", "hard"]);
@@ -281,6 +288,44 @@ function removeStoredValue(storage: StorageLike | undefined, key: string): void 
   } catch {
     // Storage failures are safely ignored for the same reason as write failures.
   }
+}
+
+function createBrowserVisitorId(): string | null {
+  try {
+    return globalThis.crypto?.randomUUID?.() ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function readAnalyticsVisitorId(storage: StorageLike | undefined): string | null {
+  if (!storage) return null;
+
+  try {
+    const visitorId = storage.getItem(ANALYTICS_VISITOR_STORAGE_KEY);
+    return visitorId && SAFE_VISITOR_ID.test(visitorId) ? visitorId : null;
+  } catch {
+    return null;
+  }
+}
+
+function getOrCreateAnalyticsVisitorId(
+  storage: StorageLike | undefined,
+  generateVisitorId: () => string | null,
+): string | null {
+  const existingVisitorId = readAnalyticsVisitorId(storage);
+  if (existingVisitorId) return existingVisitorId;
+
+  const visitorId = generateVisitorId();
+  if (!visitorId || !SAFE_VISITOR_ID.test(visitorId)) return null;
+
+  try {
+    storage?.setItem(ANALYTICS_VISITOR_STORAGE_KEY, visitorId);
+  } catch {
+    // Tracking can still work for this visit if browser storage is unavailable.
+  }
+
+  return visitorId;
 }
 
 function hasCampaign(attribution: CampaignAttribution): boolean {
@@ -520,6 +565,7 @@ export function createAnalyticsClient(
   const loadPostHog = dependencies.loadPostHog ?? loadBrowserPostHog;
   const loadMetaPixel = dependencies.loadMetaPixel ?? loadBrowserMetaPixel;
   const getPageOrigin = dependencies.getPageOrigin ?? (() => (typeof window === "undefined" ? undefined : window.location.origin));
+  const generateVisitorId = dependencies.generateVisitorId ?? createBrowserVisitorId;
   let consent: ConsentPreferences = { analytics: false, marketing: false };
   let posthog: PostHogClient | null = null;
   let metaPixel: MetaClient | null = null;
@@ -546,6 +592,7 @@ export function createAnalyticsClient(
           return null;
         }
 
+        const visitorId = getOrCreateAnalyticsVisitorId(storage, generateVisitorId);
         client.init(config.posthogToken!, {
           api_host: config.posthogHost!,
           autocapture: false,
@@ -567,6 +614,12 @@ export function createAnalyticsClient(
           persistence: "memory",
           disable_persistence: true,
           person_profiles: "never",
+          ...(visitorId ? {
+            bootstrap: {
+              distinctID: visitorId,
+              isIdentifiedID: false,
+            },
+          } : {}),
           before_send: sanitizePostHogEvent,
         });
         posthog = client;
@@ -679,6 +732,7 @@ export function createAnalyticsClient(
 
       if (!nextConsent.analytics) {
         removeStoredValue(storage, CAMPAIGN_STORAGE_KEY);
+        removeStoredValue(storage, ANALYTICS_VISITOR_STORAGE_KEY);
         lastPostHogPagePath = null;
         if (analyticsWasEnabled) {
           const deliveries = readCompletionDelivery(storage);

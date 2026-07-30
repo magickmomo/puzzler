@@ -8,6 +8,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: readonly ChangelogEntry[] = [
   {
+    date: "July 30, 2026",
+    title: "Improved analytics",
+    summary: "Optional, privacy-friendly analytics now provide better insight into how players discover, start, and complete games.",
+    highlights: [
+      "Analytics remain anonymous and only run with your consent.",
+      "Better insights help improve game balance, discoverability, and the overall arcade experience.",
+    ],
+  },
+  {
     date: "July 28, 2026",
     title: "Flag Marathon and challenges",
     summary: "Flag Blitz gets more responsive play, clearer settings, and shareable Flag Marathon runs.",
