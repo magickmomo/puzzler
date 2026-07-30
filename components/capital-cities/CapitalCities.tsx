@@ -34,6 +34,7 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
   const recordPlay = usePuzzlerStore((state) => state.recordCapitalCitiesPlay);
   const recordResult = usePuzzlerStore((state) => state.recordCapitalCitiesResult);
   const bestTimeMs = usePuzzlerStore((state) => state.capitalCities.bestTimeMs);
+  const totalPlays = usePuzzlerStore((state) => state.capitalCities.totalPlays);
   const { analyticsConsentGranted, analyticsReady, consentResolved } = useCookieSettings();
   const [board, setBoard] = useState(() => createCapitalMatchBoard());
   const [roundState, setRoundState] = useState<RoundState>("waiting");
@@ -49,6 +50,8 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
   const initialGameStartedTrackedRef = useRef(false);
   const activeRunRef = useRef(false);
   const mistakesRef = useRef(0);
+  const attemptsRef = useRef(0);
+  const gameRunNumberRef = useRef(0);
   const matchedCodesRef = useRef<string[]>([]);
 
   function clearResolutionTimer() {
@@ -56,6 +59,10 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
       window.clearTimeout(resolutionTimerRef.current);
       resolutionTimerRef.current = null;
     }
+  }
+
+  function getWallClockDurationMs(): number {
+    return startedAtRef.current === null ? 0 : Math.max(0, Date.now() - startedAtRef.current);
   }
 
   useEffect(() => () => clearResolutionTimer(), []);
@@ -71,7 +78,7 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
     if (!activeRunRef.current || !analyticsReady || !analyticsConsentGranted || initialGameStartedTrackedRef.current) return;
 
     initialGameStartedTrackedRef.current = true;
-    void trackGameStarted({ game: "capital_cities" });
+    void trackGameStarted({ game: "capital_cities", game_run_number: gameRunNumberRef.current });
   }, [analyticsConsentGranted, analyticsReady]);
 
   useEffect(() => {
@@ -91,6 +98,8 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
     startedAtRef.current = Date.now();
     activeRunRef.current = true;
     mistakesRef.current = 0;
+    attemptsRef.current = 0;
+    gameRunNumberRef.current = totalPlays + 1;
     matchedCodesRef.current = [];
     setBoard(createCapitalMatchBoard());
     setRoundState("playing");
@@ -103,7 +112,7 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
     recordPlay();
     if (isReplay) {
       void trackReplayStarted({ game: "capital_cities" });
-      void trackGameStarted({ game: "capital_cities" });
+      void trackGameStarted({ game: "capital_cities", game_run_number: gameRunNumberRef.current });
     }
   }
 
@@ -112,9 +121,11 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
       activeRunRef.current = false;
       void trackGameAbandoned({
         game: "capital_cities",
-        duration_ms: startedAtRef.current === null ? 0 : getCapitalMatchElapsedMs(startedAtRef.current, mistakesRef.current),
+        duration_ms: getWallClockDurationMs(),
+        attempts: attemptsRef.current,
         mistakes: mistakesRef.current,
-        progress: matchedCodesRef.current.length,
+        game_run_number: gameRunNumberRef.current,
+        exit_reason: "hub",
       });
     }
 
@@ -124,6 +135,7 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
 
   function resolvePair(countryCode: string, capitalCode: string) {
     const correct = isCapitalMatch(countryCode, capitalCode);
+    attemptsRef.current += 1;
     setResolvingPair({ countryCode, capitalCode, correct });
 
     if (!correct) {
@@ -147,11 +159,13 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
             void trackGameCompleted({
               game: "capital_cities",
               score: board.pairs.length,
-              duration_ms: finalElapsedMs,
+              duration_ms: getWallClockDurationMs(),
+              attempts: attemptsRef.current,
               mistakes: mistakesRef.current,
-              progress: board.pairs.length,
+              game_run_number: gameRunNumberRef.current,
+              end_reason: "cleared",
             });
-            void trackFirstGameCompletion("capital_cities");
+            if (attemptsRef.current > 0) void trackFirstGameCompletion("capital_cities");
           }
         }
       }

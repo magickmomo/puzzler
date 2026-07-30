@@ -71,7 +71,7 @@ function ConsentChoices({
       <legend className="text-sm font-black text-white">Choose optional cookies</legend>
       <ConsentChoice
         title="Analytics"
-        description="Help us understand which games and features are working well."
+        description="Help us understand which games and features are working well, including whether a browser returns."
         checked={preferences.analytics}
         disabled={disabled}
         onCheckedChange={(analytics) => onChange({ ...preferences, analytics })}

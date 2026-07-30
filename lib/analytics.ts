@@ -10,6 +10,7 @@
 export const CONSENT_STORAGE_KEY = "puzzler-consent-v1";
 export const CAMPAIGN_STORAGE_KEY = "puzzler-campaign-v1";
 export const FIRST_COMPLETION_STORAGE_KEY = "puzzler-first-game-completed-v1";
+export const ANALYTICS_VISITOR_STORAGE_KEY = "puzzler-analytics-visitor-v1";
 
 export type ConsentPreferences = {
   analytics: boolean;
@@ -31,15 +32,19 @@ export type CampaignAttribution = Partial<{
 export type AnalyticsGame = "flag_blitz" | "capital_cities";
 export type FlagBlitzMode = "classic" | "unlimited" | "speed-match" | "flag-match-unlimited";
 export type AnalyticsDifficulty = "easy" | "medium" | "hard";
+export type GameEndReason = "cleared" | "wrong_answer" | "timeout" | "saved";
+export type GameExitReason = "hub" | "restart";
 
 export type AnalyticsEventProperties = {
   ad_landing_viewed: { landing_path: string } & CampaignAttribution;
   game_selected: { game: AnalyticsGame };
+  game_mode_selected: { game: "flag_blitz"; mode: FlagBlitzMode };
   game_started: {
     game: AnalyticsGame;
     mode?: FlagBlitzMode;
     difficulty?: AnalyticsDifficulty;
     timer_enabled?: boolean;
+    game_run_number: number;
   };
   game_completed: {
     game: AnalyticsGame;
@@ -48,8 +53,10 @@ export type AnalyticsEventProperties = {
     timer_enabled?: boolean;
     score: number;
     duration_ms: number;
-    mistakes?: number;
-    progress?: number;
+    attempts: number;
+    mistakes: number;
+    game_run_number: number;
+    end_reason: GameEndReason;
   };
   game_abandoned: {
     game: AnalyticsGame;
@@ -57,8 +64,10 @@ export type AnalyticsEventProperties = {
     difficulty?: AnalyticsDifficulty;
     timer_enabled?: boolean;
     duration_ms: number;
-    mistakes?: number;
-    progress?: number;
+    attempts: number;
+    mistakes: number;
+    game_run_number: number;
+    exit_reason: GameExitReason;
   };
   replay_started: {
     game: AnalyticsGame;
@@ -130,6 +139,10 @@ type PostHogOptions = {
   persistence: "memory";
   disable_persistence: true;
   person_profiles: "never";
+  bootstrap?: {
+    distinctID: string;
+    isIdentifiedID: false;
+  };
   before_send: (payload: PostHogCapturePayload) => PostHogCapturePayload | null;
 };
 
@@ -152,6 +165,7 @@ export type AnalyticsDependencies = {
   loadPostHog?: () => Promise<PostHogClient>;
   loadMetaPixel?: (pixelId: string) => Promise<MetaClient>;
   getPageOrigin?: () => string | undefined;
+  generateVisitorId?: () => string | null;
 };
 
 type CompletionDelivery = Partial<Record<"posthog" | "meta", true>>;
@@ -167,6 +181,7 @@ const CAMPAIGN_PARAMETERS = [
 const ANALYTICS_EVENT_NAMES = [
   "ad_landing_viewed",
   "game_selected",
+  "game_mode_selected",
   "game_started",
   "game_completed",
   "game_abandoned",
@@ -194,7 +209,10 @@ const ANALYTICS_EVENT_PROPERTY_KEYS = new Set<string>([
   "score",
   "duration_ms",
   "mistakes",
-  "progress",
+  "attempts",
+  "game_run_number",
+  "end_reason",
+  "exit_reason",
   "pool_size",
   "challenger_score",
   "challenge_outcome",
@@ -213,6 +231,7 @@ const POSTHOG_REQUIRED_TRANSPORT_PROPERTY_KEYS = new Set([
 ]);
 const SAFE_UTM_VALUE = /^[a-zA-Z0-9._~-]{1,100}$/;
 const SAFE_LANDING_PATH = /^\/(?:[a-z0-9-]+(?:\/[a-z0-9-]+)*)?\/?$/;
+const SAFE_VISITOR_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ANALYTICS_GAMES = new Set<AnalyticsGame>(["flag_blitz", "capital_cities"]);
 const FLAG_BLITZ_MODES = new Set<FlagBlitzMode>(["classic", "unlimited", "speed-match", "flag-match-unlimited"]);
 const ANALYTICS_DIFFICULTIES = new Set<AnalyticsDifficulty>(["easy", "medium", "hard"]);
@@ -271,6 +290,44 @@ function removeStoredValue(storage: StorageLike | undefined, key: string): void 
   }
 }
 
+function createBrowserVisitorId(): string | null {
+  try {
+    return globalThis.crypto?.randomUUID?.() ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function readAnalyticsVisitorId(storage: StorageLike | undefined): string | null {
+  if (!storage) return null;
+
+  try {
+    const visitorId = storage.getItem(ANALYTICS_VISITOR_STORAGE_KEY);
+    return visitorId && SAFE_VISITOR_ID.test(visitorId) ? visitorId : null;
+  } catch {
+    return null;
+  }
+}
+
+function getOrCreateAnalyticsVisitorId(
+  storage: StorageLike | undefined,
+  generateVisitorId: () => string | null,
+): string | null {
+  const existingVisitorId = readAnalyticsVisitorId(storage);
+  if (existingVisitorId) return existingVisitorId;
+
+  const visitorId = generateVisitorId();
+  if (!visitorId || !SAFE_VISITOR_ID.test(visitorId)) return null;
+
+  try {
+    storage?.setItem(ANALYTICS_VISITOR_STORAGE_KEY, visitorId);
+  } catch {
+    // Tracking can still work for this visit if browser storage is unavailable.
+  }
+
+  return visitorId;
+}
+
 function hasCampaign(attribution: CampaignAttribution): boolean {
   return Object.keys(attribution).length > 0;
 }
@@ -299,9 +356,11 @@ function isSafeAnalyticsProperty(key: string, value: unknown): value is Analytic
   if (key === "difficulty") return typeof value === "string" && ANALYTICS_DIFFICULTIES.has(value as AnalyticsDifficulty);
   if (key === "landing_path" || key === "page_path") return typeof value === "string" && SAFE_LANDING_PATH.test(value);
   if (key === "timer_enabled") return typeof value === "boolean";
+  if (key === "end_reason") return value === "cleared" || value === "wrong_answer" || value === "timeout" || value === "saved";
+  if (key === "exit_reason") return value === "hub" || value === "restart";
   if (key === "challenge_outcome") return value === "win" || value === "loss" || value === "draw";
   if (key === "share_method") return value === "native" || value === "copy";
-  if (key === "score" || key === "duration_ms" || key === "mistakes" || key === "progress" || key === "pool_size" || key === "challenger_score") {
+  if (key === "score" || key === "duration_ms" || key === "mistakes" || key === "attempts" || key === "game_run_number" || key === "pool_size" || key === "challenger_score") {
     return typeof value === "number" && Number.isFinite(value) && value >= 0;
   }
   if (WEB_VITAL_PROPERTY_KEYS.has(key)) return typeof value === "number" && Number.isFinite(value) && value >= 0;
@@ -506,6 +565,7 @@ export function createAnalyticsClient(
   const loadPostHog = dependencies.loadPostHog ?? loadBrowserPostHog;
   const loadMetaPixel = dependencies.loadMetaPixel ?? loadBrowserMetaPixel;
   const getPageOrigin = dependencies.getPageOrigin ?? (() => (typeof window === "undefined" ? undefined : window.location.origin));
+  const generateVisitorId = dependencies.generateVisitorId ?? createBrowserVisitorId;
   let consent: ConsentPreferences = { analytics: false, marketing: false };
   let posthog: PostHogClient | null = null;
   let metaPixel: MetaClient | null = null;
@@ -532,6 +592,7 @@ export function createAnalyticsClient(
           return null;
         }
 
+        const visitorId = getOrCreateAnalyticsVisitorId(storage, generateVisitorId);
         client.init(config.posthogToken!, {
           api_host: config.posthogHost!,
           autocapture: false,
@@ -553,6 +614,12 @@ export function createAnalyticsClient(
           persistence: "memory",
           disable_persistence: true,
           person_profiles: "never",
+          ...(visitorId ? {
+            bootstrap: {
+              distinctID: visitorId,
+              isIdentifiedID: false,
+            },
+          } : {}),
           before_send: sanitizePostHogEvent,
         });
         posthog = client;
@@ -632,7 +699,7 @@ export function createAnalyticsClient(
       if (posthogAllowed() && !deliveries.posthog) {
         const client = await ensurePostHog();
         if (client && posthogAllowed() && client === posthog) {
-          client.capture("first_game_completed", { game });
+          client.capture("first_game_completed", toProperties({ ...readCampaign(storage), game }));
           deliveries.posthog = true;
         }
       }
@@ -665,6 +732,7 @@ export function createAnalyticsClient(
 
       if (!nextConsent.analytics) {
         removeStoredValue(storage, CAMPAIGN_STORAGE_KEY);
+        removeStoredValue(storage, ANALYTICS_VISITOR_STORAGE_KEY);
         lastPostHogPagePath = null;
         if (analyticsWasEnabled) {
           const deliveries = readCompletionDelivery(storage);
@@ -767,6 +835,10 @@ export function captureMetaPageView(path: string): Promise<void> {
 
 export function trackGameSelected(game: AnalyticsGame): Promise<void> {
   return browserAnalytics.track("game_selected", { game });
+}
+
+export function trackGameModeSelected(mode: FlagBlitzMode): Promise<void> {
+  return browserAnalytics.track("game_mode_selected", { game: "flag_blitz", mode });
 }
 
 export function trackGameStarted(properties: AnalyticsEventProperties["game_started"]): Promise<void> {

@@ -3,7 +3,7 @@ import Link from "next/link";
 const PROVIDERS = [
   {
     provider: "PostHog, EU-hosted",
-    purpose: "Explicit page, game, campaign, and Web Vitals events using an ephemeral pseudonymous visitor ID.",
+    purpose: "Explicit page, game, campaign, and Web Vitals events using a pseudonymous browser ID to recognise returning visitors.",
     category: "Analytics",
     href: "https://posthog.com/privacy",
     linkLabel: "PostHog Privacy Policy",
@@ -28,7 +28,7 @@ export default function PrivacyPage() {
         <p className="text-xs font-black uppercase tracking-[0.25em] text-cyan-300">Pocket Arcade</p>
         <h1 className="mt-2 text-3xl font-black tracking-tight text-white">Privacy notice</h1>
         <p className="mt-4 text-sm leading-7 text-slate-300">This is a plain-language implementation notice about how Puzzler currently works. It is not a claim of blanket legal compliance.</p>
-        <p className="mt-2 text-xs font-semibold text-slate-500">Last updated: 25 July 2026</p>
+        <p className="mt-2 text-xs font-semibold text-slate-500">Last updated: 30 July 2026</p>
 
         <div className="mt-8 space-y-8 text-sm leading-7 text-slate-300">
           <section>
@@ -66,13 +66,13 @@ export default function PrivacyPage() {
 
           <section>
             <h2 className="text-lg font-black text-white">What optional measurement can collect</h2>
-            <p className="mt-2">When Analytics is accepted, PostHog receives only explicit page, game, campaign, and Web Vitals events, a sanitised origin and route path without a query string or fragment, allowlisted UTM campaign parameters, and an ephemeral pseudonymous visitor ID needed to ingest the event. Puzzler only retains campaign parameters after Analytics consent.</p>
+            <p className="mt-2">When Analytics is accepted, PostHog receives only explicit page, game, campaign, and Web Vitals events, a sanitised origin and route path without a query string or fragment, allowlisted UTM campaign parameters, and a random pseudonymous browser ID. Puzzler uses that ID only to recognise returning browsers that continue to consent to Analytics. Puzzler only retains campaign parameters and this browser ID after Analytics consent.</p>
             <ul className="mt-3 list-disc space-y-1 pl-5 text-slate-400">
-              <li>PostHog receives a sanitised origin and route path for page and per-page performance reporting, selected game, game mode, difficulty, timer setting, aggregate score, duration, mistakes, progress, permitted campaign attribution, its project token, and the ephemeral visitor ID.</li>
+              <li>PostHog receives a sanitised origin and route path for page and per-page performance reporting, selected game, game mode, difficulty, timer setting, aggregate score, attempts, duration, mistakes, run outcome or exit reason, local per-game run number, permitted campaign attribution, its project token, and the pseudonymous browser ID.</li>
               <li>PostHog also receives only the numeric LCP, CLS, FCP, and INP Web Vitals values. It does not receive raw full URLs, query strings, fragments, referrers, device data, browser data, session IDs, Web Vitals attribution, network timing, or screen recordings from Puzzler.</li>
               <li>Meta receives PageView events and a FirstGameCompleted event containing only the game name while Marketing consent remains granted. Meta&apos;s Pixel may process browser and page information as described in Meta&apos;s own notice.</li>
             </ul>
-            <p className="mt-3">Puzzler does not send names, email addresses, typed answers, country-level attempts, country names or codes, age information, or player profiles to PostHog. It does not use session replay, heatmaps, broad interaction autocapture, user identification, or Meta automatic advanced matching. Pseudonymous identifiers can still be personal data.</p>
+            <p className="mt-3">Puzzler does not send names, email addresses, typed answers, country-level attempts, country names or codes, age information, or player profiles to PostHog. It does not use session replay, heatmaps, broad interaction autocapture, account-based identification, or Meta automatic advanced matching. Pseudonymous identifiers can still be personal data.</p>
           </section>
 
           <section>
@@ -80,8 +80,8 @@ export default function PrivacyPage() {
             <p className="mt-2">Puzzler uses browser storage, not only traditional cookies. Necessary local storage keeps your saved Cookie settings and local game records. Those records stay on this device and are not sent to Pocket Arcade. Optional services do not load or access their browser storage until you choose the relevant category.</p>
             <ul className="mt-3 list-disc space-y-1 pl-5 text-slate-400">
               <li>Consent and local game records remain in your browser until you change your choice, clear Puzzler&apos;s site data, or your browser removes them.</li>
-              <li>Campaign attribution and the relevant first-completion delivery flag are removed when Analytics or Marketing consent is withdrawn. The delivery flag is read only while the related optional consent is active.</li>
-              <li>Puzzler configures PostHog for memory-only operation with provider persistence disabled. Meta may set its own cookies or browser-storage identifiers after Marketing consent; see Meta&apos;s information linked below for its current details and durations.</li>
+              <li>The random Analytics browser ID and campaign attribution are removed when Analytics consent is withdrawn. Each first-completion delivery flag is removed when its related optional consent is withdrawn, and is read only while that consent remains active.</li>
+              <li>Puzzler configures PostHog for memory-only operation with provider persistence disabled. The Analytics browser ID is stored by Puzzler, not PostHog, so it can recognise a returning browser while Analytics consent remains granted. Meta may set its own cookies or browser-storage identifiers after Marketing consent; see Meta&apos;s information linked below for its current details and durations.</li>
             </ul>
           </section>
 
