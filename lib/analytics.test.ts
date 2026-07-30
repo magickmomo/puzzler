@@ -377,7 +377,7 @@ describe("analytics data minimisation", () => {
         duration_ms: 22_000,
         attempts: 10,
         mistakes: 7,
-        lifetime_run_number: 4,
+        game_run_number: 4,
         end_reason: "cleared",
         progress: 3,
       },
@@ -393,7 +393,7 @@ describe("analytics data minimisation", () => {
         duration_ms: 22_000,
         attempts: 10,
         mistakes: 7,
-        lifetime_run_number: 4,
+        game_run_number: 4,
         end_reason: "cleared",
       },
     });
@@ -421,10 +421,21 @@ describe("analytics data minimisation", () => {
         duration_ms: 5_000,
         attempts: 4,
         mistakes: 2,
-        lifetime_run_number: 7,
+        game_run_number: 7,
         exit_reason: "restart",
       },
-    })?.properties).toMatchObject({ attempts: 4, mistakes: 2, lifetime_run_number: 7, exit_reason: "restart" });
+    })?.properties).toMatchObject({ attempts: 4, mistakes: 2, game_run_number: 7, exit_reason: "restart" });
+
+    expect(sanitizePostHogEvent({
+      event: "game_started",
+      properties: {
+        token: "project-token",
+        distinct_id: "anonymous-id",
+        "$process_person_profile": false,
+        game: "capital_cities",
+        game_run_number: 3,
+      },
+    })?.properties).toMatchObject({ game: "capital_cities", game_run_number: 3 });
   });
 });
 

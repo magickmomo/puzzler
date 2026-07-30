@@ -171,7 +171,7 @@ export function FlagBlitz({
   const challengeOpenedRef = useRef(false);
   const attemptsRef = useRef(0);
   const mistakesRef = useRef(0);
-  const lifetimeRunNumberRef = useRef(0);
+  const gameRunNumberRef = useRef(0);
 
   function clearBoardTransition() {
     if (transitionTimerRef.current !== null) {
@@ -257,7 +257,7 @@ export function FlagBlitz({
       duration_ms: getRunDurationMs(),
       attempts: attemptsRef.current,
       mistakes: mistakesRef.current,
-      lifetime_run_number: lifetimeRunNumberRef.current,
+      game_run_number: gameRunNumberRef.current,
       exit_reason: exitReason,
     });
   }
@@ -363,10 +363,10 @@ export function FlagBlitz({
     pausedRunDurationRef.current = 0;
     activeRunRef.current = true;
     attemptsRef.current = 0;
-    lifetimeRunNumberRef.current = totalPlays + 1;
+    gameRunNumberRef.current = totalPlays + 1;
     recordPlay();
     const context = getTrackingContext(selectedGameMode, selectedDifficulty, timedUnlimited);
-    if (context) void trackGameStarted(context);
+    if (context) void trackGameStarted({ ...context, game_run_number: gameRunNumberRef.current });
     if (challenge && selectedGameMode === "flag-match-unlimited" && timedUnlimited) {
       void trackFlagMatchChallengeStarted({
         pool_size: challenge.countryPool.length,
@@ -451,6 +451,10 @@ export function FlagBlitz({
 
     const correct = isCorrectAnswer(value, questions[index]);
     attemptsRef.current += 1;
+    if (!correct) {
+      mistakesRef.current += 1;
+      setMistakes(mistakesRef.current);
+    }
     const updatedScore = getUpdatedScore({ score, streak }, correct);
     recordFlagAttempt(gameMode, questions[index].code, correct);
     setAnswer(value);
@@ -477,10 +481,10 @@ export function FlagBlitz({
         duration_ms: durationMs,
         attempts: attemptsRef.current,
         mistakes: mistakesRef.current,
-        lifetime_run_number: lifetimeRunNumberRef.current,
+        game_run_number: gameRunNumberRef.current,
         end_reason: endReason,
       });
-      void trackFirstGameCompletion("flag_blitz");
+      if (attemptsRef.current > 0) void trackFirstGameCompletion("flag_blitz");
     }
     if (challenge && gameMode === "flag-match-unlimited" && speedMatchUnlimitedTimed) {
       const challengeOutcome = getFlagMatchChallengeOutcome({ score: finalScore, mistakes: mistakesRef.current }, challenge);

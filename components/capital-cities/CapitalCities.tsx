@@ -51,7 +51,7 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
   const activeRunRef = useRef(false);
   const mistakesRef = useRef(0);
   const attemptsRef = useRef(0);
-  const lifetimeRunNumberRef = useRef(0);
+  const gameRunNumberRef = useRef(0);
   const matchedCodesRef = useRef<string[]>([]);
 
   function clearResolutionTimer() {
@@ -78,7 +78,7 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
     if (!activeRunRef.current || !analyticsReady || !analyticsConsentGranted || initialGameStartedTrackedRef.current) return;
 
     initialGameStartedTrackedRef.current = true;
-    void trackGameStarted({ game: "capital_cities" });
+    void trackGameStarted({ game: "capital_cities", game_run_number: gameRunNumberRef.current });
   }, [analyticsConsentGranted, analyticsReady]);
 
   useEffect(() => {
@@ -99,7 +99,7 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
     activeRunRef.current = true;
     mistakesRef.current = 0;
     attemptsRef.current = 0;
-    lifetimeRunNumberRef.current = totalPlays + 1;
+    gameRunNumberRef.current = totalPlays + 1;
     matchedCodesRef.current = [];
     setBoard(createCapitalMatchBoard());
     setRoundState("playing");
@@ -112,7 +112,7 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
     recordPlay();
     if (isReplay) {
       void trackReplayStarted({ game: "capital_cities" });
-      void trackGameStarted({ game: "capital_cities" });
+      void trackGameStarted({ game: "capital_cities", game_run_number: gameRunNumberRef.current });
     }
   }
 
@@ -124,7 +124,7 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
         duration_ms: getWallClockDurationMs(),
         attempts: attemptsRef.current,
         mistakes: mistakesRef.current,
-        lifetime_run_number: lifetimeRunNumberRef.current,
+        game_run_number: gameRunNumberRef.current,
         exit_reason: "hub",
       });
     }
@@ -162,10 +162,10 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
               duration_ms: getWallClockDurationMs(),
               attempts: attemptsRef.current,
               mistakes: mistakesRef.current,
-              lifetime_run_number: lifetimeRunNumberRef.current,
+              game_run_number: gameRunNumberRef.current,
               end_reason: "cleared",
             });
-            void trackFirstGameCompletion("capital_cities");
+            if (attemptsRef.current > 0) void trackFirstGameCompletion("capital_cities");
           }
         }
       }

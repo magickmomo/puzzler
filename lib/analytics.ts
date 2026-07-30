@@ -43,6 +43,7 @@ export type AnalyticsEventProperties = {
     mode?: FlagBlitzMode;
     difficulty?: AnalyticsDifficulty;
     timer_enabled?: boolean;
+    game_run_number: number;
   };
   game_completed: {
     game: AnalyticsGame;
@@ -53,7 +54,7 @@ export type AnalyticsEventProperties = {
     duration_ms: number;
     attempts: number;
     mistakes: number;
-    lifetime_run_number: number;
+    game_run_number: number;
     end_reason: GameEndReason;
   };
   game_abandoned: {
@@ -64,7 +65,7 @@ export type AnalyticsEventProperties = {
     duration_ms: number;
     attempts: number;
     mistakes: number;
-    lifetime_run_number: number;
+    game_run_number: number;
     exit_reason: GameExitReason;
   };
   replay_started: {
@@ -203,7 +204,7 @@ const ANALYTICS_EVENT_PROPERTY_KEYS = new Set<string>([
   "duration_ms",
   "mistakes",
   "attempts",
-  "lifetime_run_number",
+  "game_run_number",
   "end_reason",
   "exit_reason",
   "pool_size",
@@ -314,7 +315,7 @@ function isSafeAnalyticsProperty(key: string, value: unknown): value is Analytic
   if (key === "exit_reason") return value === "hub" || value === "restart";
   if (key === "challenge_outcome") return value === "win" || value === "loss" || value === "draw";
   if (key === "share_method") return value === "native" || value === "copy";
-  if (key === "score" || key === "duration_ms" || key === "mistakes" || key === "attempts" || key === "lifetime_run_number" || key === "pool_size" || key === "challenger_score") {
+  if (key === "score" || key === "duration_ms" || key === "mistakes" || key === "attempts" || key === "game_run_number" || key === "pool_size" || key === "challenger_score") {
     return typeof value === "number" && Number.isFinite(value) && value >= 0;
   }
   if (WEB_VITAL_PROPERTY_KEYS.has(key)) return typeof value === "number" && Number.isFinite(value) && value >= 0;
