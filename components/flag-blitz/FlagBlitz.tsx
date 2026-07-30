@@ -37,6 +37,7 @@ import {
   trackFirstGameCompletion,
   trackGameAbandoned,
   trackGameCompleted,
+  trackGameModeSelected,
   trackGameStarted,
   trackReplayStarted,
   trackFlagMatchChallengeCompleted,
@@ -45,6 +46,8 @@ import {
   trackFlagMatchChallengeShared,
   trackFlagMatchChallengeStarted,
   type AnalyticsDifficulty,
+  type GameEndReason,
+  type GameExitReason,
 } from "@/lib/analytics";
 import { DifficultySelector } from "./DifficultySelector";
 import { GameModeSelector } from "./GameModeSelector";
@@ -112,6 +115,7 @@ export function FlagBlitz({
   const recordResult = usePuzzlerStore((state) => state.recordFlagBlitzResult);
   const recordFlagAttempt = usePuzzlerStore((state) => state.recordFlagBlitzAttempt);
   const excludedCountryCodes = usePuzzlerStore((state) => state.flagBlitz.settings.excludedCountryCodes);
+  const totalPlays = usePuzzlerStore((state) => state.flagBlitz.totalPlays);
   const [gameMode, setGameMode] = useState<GameMode | null>(entry === "flag-match-timer-selection" || challenge ? "flag-match-unlimited" : null);
   const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
   const [questions, setQuestions] = useState<ReturnType<typeof createQuestionDeck>>([]);
@@ -165,6 +169,9 @@ export function FlagBlitz({
   const activeRunRef = useRef(false);
   const randomRef = useRef<RandomSource | null>(null);
   const challengeOpenedRef = useRef(false);
+  const attemptsRef = useRef(0);
+  const mistakesRef = useRef(0);
+  const lifetimeRunNumberRef = useRef(0);
 
   function clearBoardTransition() {
     if (transitionTimerRef.current !== null) {
@@ -239,7 +246,7 @@ export function FlagBlitz({
     return context;
   }
 
-  function recordActiveRunAbandonment() {
+  function recordActiveRunAbandonment(exitReason: GameExitReason) {
     if (!activeRunRef.current) return;
     const context = getTrackingContext();
     activeRunRef.current = false;
@@ -248,12 +255,16 @@ export function FlagBlitz({
     void trackGameAbandoned({
       ...context,
       duration_ms: getRunDurationMs(),
-      progress: score,
+      attempts: attemptsRef.current,
+      mistakes: mistakesRef.current,
+      lifetime_run_number: lifetimeRunNumberRef.current,
+      exit_reason: exitReason,
     });
   }
 
   function selectGameMode(selectedGameMode: GameMode) {
     if (!hasMinimumActiveCountries(excludedCountryCodes)) return;
+    void trackGameModeSelected(selectedGameMode);
 
     if (selectedGameMode === "flag-match-unlimited" && onSelectFlagMatchUnlimited) {
       onSelectFlagMatchUnlimited();
@@ -307,7 +318,7 @@ export function FlagBlitz({
       ? createMultipleChoiceOptions(nextQuestions[0], nextCountryPool, random)
       : [];
 
-    recordActiveRunAbandonment();
+    recordActiveRunAbandonment("restart");
     gameIdRef.current += 1;
     clearBoardTransition();
     timerDeadlineRef.current = isTimedSpeedMatchRun(selectedGameMode, timedUnlimited) ? Date.now() + SPEED_MATCH_TIME_LIMIT_MS : null;
@@ -335,6 +346,7 @@ export function FlagBlitz({
     setScore(0);
     setStreak(0);
     setMistakes(0);
+    mistakesRef.current = 0;
     setAnswer("");
     setHintVisible(false);
     setWasCorrect(null);
@@ -350,6 +362,8 @@ export function FlagBlitz({
     runPausedAtRef.current = null;
     pausedRunDurationRef.current = 0;
     activeRunRef.current = true;
+    attemptsRef.current = 0;
+    lifetimeRunNumberRef.current = totalPlays + 1;
     recordPlay();
     const context = getTrackingContext(selectedGameMode, selectedDifficulty, timedUnlimited);
     if (context) void trackGameStarted(context);
@@ -436,6 +450,7 @@ export function FlagBlitz({
     if (roundState !== "playing" || !gameMode || !questions[index]) return;
 
     const correct = isCorrectAnswer(value, questions[index]);
+    attemptsRef.current += 1;
     const updatedScore = getUpdatedScore({ score, streak }, correct);
     recordFlagAttempt(gameMode, questions[index].code, correct);
     setAnswer(value);
@@ -445,7 +460,7 @@ export function FlagBlitz({
     setRoundState("answered");
   }
 
-  function finishGame(finalScore = score, completionTimeMs?: number) {
+  function finishGame(finalScore = score, completionTimeMs?: number, endReason: GameEndReason = "cleared") {
     if (!gameMode || !activeRunRef.current) return;
     clearBoardTransition();
     timerDeadlineRef.current = null;
@@ -460,17 +475,20 @@ export function FlagBlitz({
         ...context,
         score: finalScore,
         duration_ms: durationMs,
-        progress: finalScore,
+        attempts: attemptsRef.current,
+        mistakes: mistakesRef.current,
+        lifetime_run_number: lifetimeRunNumberRef.current,
+        end_reason: endReason,
       });
       void trackFirstGameCompletion("flag_blitz");
     }
     if (challenge && gameMode === "flag-match-unlimited" && speedMatchUnlimitedTimed) {
-      const challengeOutcome = getFlagMatchChallengeOutcome({ score: finalScore, mistakes }, challenge);
+      const challengeOutcome = getFlagMatchChallengeOutcome({ score: finalScore, mistakes: mistakesRef.current }, challenge);
       void trackFlagMatchChallengeCompleted({
         pool_size: countryPool.length,
         score: finalScore,
         duration_ms: durationMs,
-        mistakes,
+        mistakes: mistakesRef.current,
         challenge_outcome: challengeOutcome,
       });
     }
@@ -508,7 +526,7 @@ export function FlagBlitz({
   }
 
   function abandonGame() {
-    recordActiveRunAbandonment();
+    recordActiveRunAbandonment("hub");
     gameIdRef.current += 1;
     clearBoardTransition();
     timerDeadlineRef.current = null;
@@ -530,12 +548,14 @@ export function FlagBlitz({
     }
 
     recordFlagAttempt(gameMode, target.code, countryCode === target.code);
+    attemptsRef.current += 1;
 
     if (countryCode !== target.code) {
       const gameId = gameIdRef.current;
       setIncorrectCodes((current) => current.includes(countryCode) ? current : [...current, countryCode]);
       setStreak(0);
-      setMistakes((current) => current + 1);
+      mistakesRef.current += 1;
+      setMistakes(mistakesRef.current);
 
       if (selectedFlag) {
         if (wrongFlagTimerRef.current !== null) window.clearTimeout(wrongFlagTimerRef.current);
@@ -658,7 +678,7 @@ export function FlagBlitz({
     });
 
     if (action === "results") {
-      finishGame();
+      finishGame(score, undefined, gameMode === "unlimited" ? "wrong_answer" : "cleared");
       return;
     }
 
@@ -701,7 +721,7 @@ export function FlagBlitz({
   }, [gameMode, roundState, speedMatchUnlimitedTimed]);
 
   useEffect(() => {
-    if (isTimedSpeedMatchRun(gameMode, speedMatchUnlimitedTimed) && roundState === "playing" && timeLeft === 0) finishGame();
+    if (isTimedSpeedMatchRun(gameMode, speedMatchUnlimitedTimed) && roundState === "playing" && timeLeft === 0) finishGame(score, undefined, "timeout");
   }, [gameMode, roundState, speedMatchUnlimitedTimed, timeLeft]);
 
   const speedMatchActive = isSpeedMatchMode(gameMode);
@@ -837,7 +857,7 @@ export function FlagBlitz({
           onRestart={() => beginGame(gameMode, difficulty, speedMatchUnlimitedTimed, challenge
             ? { seed: challenge.seed, countryPool: challenge.countryPool }
             : undefined)}
-          onEndRun={finishGame}
+          onEndRun={() => finishGame(score, undefined, "saved")}
           onHub={abandonGame}
         />
       )}

@@ -31,10 +31,13 @@ export type CampaignAttribution = Partial<{
 export type AnalyticsGame = "flag_blitz" | "capital_cities";
 export type FlagBlitzMode = "classic" | "unlimited" | "speed-match" | "flag-match-unlimited";
 export type AnalyticsDifficulty = "easy" | "medium" | "hard";
+export type GameEndReason = "cleared" | "wrong_answer" | "timeout" | "saved";
+export type GameExitReason = "hub" | "restart";
 
 export type AnalyticsEventProperties = {
   ad_landing_viewed: { landing_path: string } & CampaignAttribution;
   game_selected: { game: AnalyticsGame };
+  game_mode_selected: { game: "flag_blitz"; mode: FlagBlitzMode };
   game_started: {
     game: AnalyticsGame;
     mode?: FlagBlitzMode;
@@ -48,8 +51,10 @@ export type AnalyticsEventProperties = {
     timer_enabled?: boolean;
     score: number;
     duration_ms: number;
-    mistakes?: number;
-    progress?: number;
+    attempts: number;
+    mistakes: number;
+    lifetime_run_number: number;
+    end_reason: GameEndReason;
   };
   game_abandoned: {
     game: AnalyticsGame;
@@ -57,8 +62,10 @@ export type AnalyticsEventProperties = {
     difficulty?: AnalyticsDifficulty;
     timer_enabled?: boolean;
     duration_ms: number;
-    mistakes?: number;
-    progress?: number;
+    attempts: number;
+    mistakes: number;
+    lifetime_run_number: number;
+    exit_reason: GameExitReason;
   };
   replay_started: {
     game: AnalyticsGame;
@@ -167,6 +174,7 @@ const CAMPAIGN_PARAMETERS = [
 const ANALYTICS_EVENT_NAMES = [
   "ad_landing_viewed",
   "game_selected",
+  "game_mode_selected",
   "game_started",
   "game_completed",
   "game_abandoned",
@@ -194,7 +202,10 @@ const ANALYTICS_EVENT_PROPERTY_KEYS = new Set<string>([
   "score",
   "duration_ms",
   "mistakes",
-  "progress",
+  "attempts",
+  "lifetime_run_number",
+  "end_reason",
+  "exit_reason",
   "pool_size",
   "challenger_score",
   "challenge_outcome",
@@ -299,9 +310,11 @@ function isSafeAnalyticsProperty(key: string, value: unknown): value is Analytic
   if (key === "difficulty") return typeof value === "string" && ANALYTICS_DIFFICULTIES.has(value as AnalyticsDifficulty);
   if (key === "landing_path" || key === "page_path") return typeof value === "string" && SAFE_LANDING_PATH.test(value);
   if (key === "timer_enabled") return typeof value === "boolean";
+  if (key === "end_reason") return value === "cleared" || value === "wrong_answer" || value === "timeout" || value === "saved";
+  if (key === "exit_reason") return value === "hub" || value === "restart";
   if (key === "challenge_outcome") return value === "win" || value === "loss" || value === "draw";
   if (key === "share_method") return value === "native" || value === "copy";
-  if (key === "score" || key === "duration_ms" || key === "mistakes" || key === "progress" || key === "pool_size" || key === "challenger_score") {
+  if (key === "score" || key === "duration_ms" || key === "mistakes" || key === "attempts" || key === "lifetime_run_number" || key === "pool_size" || key === "challenger_score") {
     return typeof value === "number" && Number.isFinite(value) && value >= 0;
   }
   if (WEB_VITAL_PROPERTY_KEYS.has(key)) return typeof value === "number" && Number.isFinite(value) && value >= 0;
@@ -632,7 +645,7 @@ export function createAnalyticsClient(
       if (posthogAllowed() && !deliveries.posthog) {
         const client = await ensurePostHog();
         if (client && posthogAllowed() && client === posthog) {
-          client.capture("first_game_completed", { game });
+          client.capture("first_game_completed", toProperties({ ...readCampaign(storage), game }));
           deliveries.posthog = true;
         }
       }
@@ -767,6 +780,10 @@ export function captureMetaPageView(path: string): Promise<void> {
 
 export function trackGameSelected(game: AnalyticsGame): Promise<void> {
   return browserAnalytics.track("game_selected", { game });
+}
+
+export function trackGameModeSelected(mode: FlagBlitzMode): Promise<void> {
+  return browserAnalytics.track("game_mode_selected", { game: "flag_blitz", mode });
 }
 
 export function trackGameStarted(properties: AnalyticsEventProperties["game_started"]): Promise<void> {

@@ -363,9 +363,86 @@ describe("analytics data minimisation", () => {
       },
     });
   });
+
+  it("keeps aggregate game outcome fields and removes the retired progress field", () => {
+    expect(sanitizePostHogEvent({
+      event: "game_completed",
+      properties: {
+        token: "project-token",
+        distinct_id: "anonymous-id",
+        "$process_person_profile": false,
+        game: "flag_blitz",
+        mode: "classic",
+        score: 3,
+        duration_ms: 22_000,
+        attempts: 10,
+        mistakes: 7,
+        lifetime_run_number: 4,
+        end_reason: "cleared",
+        progress: 3,
+      },
+    })).toEqual({
+      event: "game_completed",
+      properties: {
+        token: "project-token",
+        distinct_id: "anonymous-id",
+        "$process_person_profile": false,
+        game: "flag_blitz",
+        mode: "classic",
+        score: 3,
+        duration_ms: 22_000,
+        attempts: 10,
+        mistakes: 7,
+        lifetime_run_number: 4,
+        end_reason: "cleared",
+      },
+    });
+  });
+
+  it("allows Flag Blitz mode selection and safe abandonment reasons", () => {
+    expect(sanitizePostHogEvent({
+      event: "game_mode_selected",
+      properties: {
+        token: "project-token",
+        distinct_id: "anonymous-id",
+        "$process_person_profile": false,
+        game: "flag_blitz",
+        mode: "flag-match-unlimited",
+      },
+    })?.properties).toMatchObject({ game: "flag_blitz", mode: "flag-match-unlimited" });
+
+    expect(sanitizePostHogEvent({
+      event: "game_abandoned",
+      properties: {
+        token: "project-token",
+        distinct_id: "anonymous-id",
+        "$process_person_profile": false,
+        game: "flag_blitz",
+        duration_ms: 5_000,
+        attempts: 4,
+        mistakes: 2,
+        lifetime_run_number: 7,
+        exit_reason: "restart",
+      },
+    })?.properties).toMatchObject({ attempts: 4, mistakes: 2, lifetime_run_number: 7, exit_reason: "restart" });
+  });
 });
 
 describe("analytics event delivery guards", () => {
+  it("attaches stored campaign attribution to first_game_completed", async () => {
+    const analytics = createTestAnalytics();
+
+    await analytics.client.setConsent({ analytics: true, marketing: false });
+    analytics.client.storeCampaignAttribution("?utm_source=facebook&utm_campaign=summer");
+    await analytics.client.trackFirstGameCompleted("flag_blitz");
+
+    expect(analytics.posthogCalls.find((call) => call.event === "first_game_completed")?.properties).toMatchObject({
+      game: "flag_blitz",
+      utm_source: "facebook",
+      utm_campaign: "summer",
+    });
+  });
+
   it("delivers first_game_completed once per destination", async () => {
     const analytics = createTestAnalytics();
 
