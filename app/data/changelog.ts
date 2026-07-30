@@ -12,7 +12,7 @@ export const CHANGELOG_ENTRIES: readonly ChangelogEntry[] = [
     title: "Improved analytics",
     summary: "Optional, privacy-friendly analytics now provide better insight into how players discover, start, and complete games.",
     highlights: [
-      "Analytics remain anonymous and only run with your consent.",
+      "Analytics remain pseudonymous and only run with your consent, with returning browsers measured while that consent remains enabled.",
       "Better insights help improve game balance, discoverability, and the overall arcade experience.",
     ],
   },
