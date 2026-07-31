@@ -1,9 +1,9 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 
-const [inputPath, outputPath] = process.argv.slice(2);
+const [inputPath, outputDirectory] = process.argv.slice(2);
 
-if (!inputPath || !outputPath) {
-  throw new Error("Usage: node scripts/generate-country-silhouettes.mjs <input.geojson> <output.ts>");
+if (!inputPath || !outputDirectory) {
+  throw new Error("Usage: node scripts/generate-country-silhouettes.mjs <input.geojson> <output-directory>");
 }
 
 const countrySource = await readFile(new URL("../app/data/countries.ts", import.meta.url), "utf8");
@@ -12,7 +12,8 @@ const countryCodes = [...countrySource.matchAll(/\["([a-z]{2})",/g)]
   .filter((code) => !code.startsWith("gb-"));
 const countries = JSON.parse(await readFile(inputPath, "utf8"));
 const overrideDirectory = new URL("../app/data/country-silhouette-overrides/", import.meta.url);
-const overrideCodes = ["bb", "mc", "mh", "nr", "sm", "tv", "va"];
+const overrideCodes = ["bb", "mc", "nr", "sm", "va"];
+const temporarilyDisabledCodes = new Set(["mh", "tv"]);
 const overrideFeatures = new Map(await Promise.all(overrideCodes.map(async (code) => {
   const data = JSON.parse(await readFile(new URL(`${code}.geojson`, overrideDirectory), "utf8"));
   return [code, data.features[0]];
@@ -91,34 +92,6 @@ function toPath(rings) {
   )).join("") + "Z").join("");
 }
 
-function getIslandChain(polygons, [targetLongitude, targetLatitude]) {
-  const records = polygons.map((polygon) => ({ polygon, bounds: getBounds(polygon) }));
-  const anchor = records.reduce((closest, current) => {
-    const longitude = (current.bounds.minLongitude + current.bounds.maxLongitude) / 2;
-    const latitude = (current.bounds.minLatitude + current.bounds.maxLatitude) / 2;
-    const distance = (longitude - targetLongitude) ** 2 + (latitude - targetLatitude) ** 2;
-    return distance < closest.distance ? { record: current, distance } : closest;
-  }, { record: records[0], distance: Infinity }).record;
-  const chain = new Set([anchor]);
-  const maximumIslandGap = 0.7;
-  let added = true;
-
-  while (added) {
-    added = false;
-    for (const candidate of records) {
-      if ([...chain].some((island) => (
-        longitudeGap(island.bounds, candidate.bounds) <= maximumIslandGap
-        && intervalGap(island.bounds.minLatitude, island.bounds.maxLatitude, candidate.bounds.minLatitude, candidate.bounds.maxLatitude) <= maximumIslandGap
-      )) && !chain.has(candidate)) {
-        chain.add(candidate);
-        added = true;
-      }
-    }
-  }
-
-  return [...chain].map(({ polygon }) => polygon);
-}
-
 function getFeatureForCode(code) {
   const upperCode = code.toUpperCase();
   const exactMatch = countries.features.find((feature) => feature.properties.ISO_A2 === upperCode);
@@ -132,15 +105,15 @@ function getFeatureForCode(code) {
   return countries.features.find((feature) => feature.properties.ISO_A2_EH === upperCode);
 }
 
-const silhouettes = countryCodes.map((code) => {
+const silhouettes = countryCodes.filter((code) => !temporarilyDisabledCodes.has(code)).map((code) => {
   const feature = overrideFeatures.get(code) ?? getFeatureForCode(code);
   if (!feature) throw new Error(`Missing Natural Earth geometry for ${code}.`);
   const allPolygons = getPolygons(feature.geometry);
-  // Ailinglaplap is a representative central Ralik-chain atoll. Keeping this connected
-  // group at real relative positions is clearer and more faithful than shrinking the
-  // Republic's ocean-wide extent into an unreadable speck.
-  const polygons = code === "mh" ? getIslandChain(allPolygons, [168.78, 7.28]) : getHomeRegionPolygons(allPolygons);
+  const polygons = getHomeRegionPolygons(allPolygons);
   return [code, toPath(polygons.flat())];
 });
 
-await writeFile(outputPath, `// Generated from Natural Earth 10m Admin 0 Countries (public domain).\n// Barbados, Monaco, Marshall Islands, Nauru, San Marino, Tuvalu, and Vatican City use high-resolution geoBoundaries gbOpen overrides (CC BY 4.0); see country-silhouette-overrides/README.md.\n// Run: node scripts/generate-country-silhouettes.mjs <source.geojson> app/data/country-silhouettes.ts\n\nexport const COUNTRY_SILHOUETTE_PATHS: Readonly<Record<string, string>> = ${JSON.stringify(Object.fromEntries(silhouettes))};\n`);
+await mkdir(outputDirectory, { recursive: true });
+await Promise.all(silhouettes.map(([code, path]) => (
+  writeFile(`${outputDirectory}/${code}.json`, JSON.stringify({ path }))
+)));

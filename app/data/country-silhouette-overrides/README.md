@@ -1,6 +1,6 @@
 # Country silhouette overrides
 
-These files replace low-detail Natural Earth 10m outlines that are not fair at Puzzler's card size. For the Marshall Islands, the game uses its central chain of atolls at their real relative positions, rather than spreading the whole country across its ocean-wide extent.
+These files replace low-detail Natural Earth 10m outlines that are not fair at Puzzler's card size.
 
 - `bb.geojson` — Barbados (BRB), geoBoundaries gbOpen ADM0, source: geoBoundaries and Wikimedia Commons.
 - `mc.geojson` — Monaco (MCO), geoBoundaries gbOpen ADM0, source: OpenStreetMap and Wambacher.
@@ -14,4 +14,4 @@ All files are from geoBoundaries release `9469f09` and are licensed under [CC BY
 
 ## Follow-up
 
-- Revisit the Marshall Islands and Tuvalu silhouettes. Their dispersed, extremely narrow atolls need a purpose-designed presentation that stays geographically faithful and readable at the game card size.
+- Revisit the Marshall Islands and Tuvalu silhouettes. Their dispersed, extremely narrow atolls are excluded from the game until a purpose-designed presentation is both geographically faithful and readable at the game card size.

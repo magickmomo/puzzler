@@ -53,6 +53,13 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
   const gameRunNumberRef = useRef(0);
   const matchedCodesRef = useRef<string[]>([]);
 
+  function trackRunStartIfNeeded() {
+    if (!activeRunRef.current || !analyticsReady || !analyticsConsentGranted || gameStartedTrackedRef.current) return;
+
+    gameStartedTrackedRef.current = true;
+    void trackGameStarted({ game: "capital_cities", game_run_number: gameRunNumberRef.current });
+  }
+
   function clearResolutionTimer() {
     if (resolutionTimerRef.current !== null) {
       window.clearTimeout(resolutionTimerRef.current);
@@ -67,11 +74,8 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
   useEffect(() => () => clearResolutionTimer(), []);
 
   useEffect(() => {
-    if (!activeRunRef.current || !analyticsReady || !analyticsConsentGranted || gameStartedTrackedRef.current) return;
-
-    gameStartedTrackedRef.current = true;
-    void trackGameStarted({ game: "capital_cities", game_run_number: gameRunNumberRef.current });
-  }, [analyticsConsentGranted, analyticsReady]);
+    trackRunStartIfNeeded();
+  }, [analyticsConsentGranted, analyticsReady, roundState]);
 
   useEffect(() => {
     if (roundState !== "playing" || startedAtRef.current === null) return;
@@ -89,7 +93,7 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
     clearResolutionTimer();
     startedAtRef.current = Date.now();
     activeRunRef.current = true;
-    gameStartedTrackedRef.current = isReplay;
+    gameStartedTrackedRef.current = false;
     mistakesRef.current = 0;
     attemptsRef.current = 0;
     gameRunNumberRef.current = totalPlays + 1;
@@ -105,7 +109,6 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
     recordPlay();
     if (isReplay) {
       void trackReplayStarted({ game: "capital_cities" });
-      void trackGameStarted({ game: "capital_cities", game_run_number: gameRunNumberRef.current });
     }
   }
 
@@ -149,16 +152,24 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
           recordResult(finalElapsedMs);
           if (activeRunRef.current) {
             activeRunRef.current = false;
-            void trackGameCompleted({
-              game: "capital_cities",
-              score: board.pairs.length,
-              duration_ms: getWallClockDurationMs(),
-              attempts: attemptsRef.current,
-              mistakes: mistakesRef.current,
-              game_run_number: gameRunNumberRef.current,
-              end_reason: "cleared",
-            });
-            if (attemptsRef.current > 0) void trackFirstGameCompletion("capital_cities");
+            void (async () => {
+              // A very fast first run can finish before the consent-ready effect has fired.
+              // Emit the start immediately before completion in that edge case.
+              if (!gameStartedTrackedRef.current && analyticsReady && analyticsConsentGranted) {
+                gameStartedTrackedRef.current = true;
+                await trackGameStarted({ game: "capital_cities", game_run_number: gameRunNumberRef.current });
+              }
+              await trackGameCompleted({
+                game: "capital_cities",
+                score: board.pairs.length,
+                duration_ms: getWallClockDurationMs(),
+                attempts: attemptsRef.current,
+                mistakes: mistakesRef.current,
+                game_run_number: gameRunNumberRef.current,
+                end_reason: "cleared",
+              });
+              if (attemptsRef.current > 0) await trackFirstGameCompletion("capital_cities");
+            })();
           }
         }
       }
