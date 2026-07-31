@@ -6,6 +6,7 @@ type GameHeaderScore = {
 export function GameHeader({
   title,
   isPlaying,
+  showDivider,
   score,
   pauseDisabled,
   onBack,
@@ -13,13 +14,14 @@ export function GameHeader({
 }: {
   title: string;
   isPlaying: boolean;
+  showDivider: boolean;
   score: GameHeaderScore | null;
   pauseDisabled: boolean;
   onBack: () => void;
   onPause: () => void;
 }) {
   return (
-    <header className="relative flex min-h-14 items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 px-2">
+    <header className={`relative flex min-h-14 items-center gap-2 px-2 ${showDivider ? "border-b border-slate-800" : ""}`}>
       <button
         type="button"
         onClick={onBack}
@@ -31,7 +33,7 @@ export function GameHeader({
       <p className="pointer-events-none absolute left-1/2 top-1/2 max-w-[55%] -translate-x-1/2 -translate-y-1/2 truncate text-center text-sm font-black tracking-tight text-white sm:text-base">{title}</p>
       <div className="ml-auto flex shrink-0 items-center gap-2">
         {score && (
-          <div className="flex min-h-12 min-w-12 items-center justify-center gap-1.5 rounded-xl border border-amber-300/15 bg-amber-300/5 px-2 text-sm font-black text-amber-300" aria-label={score.label}>
+          <div className="flex min-h-10 min-w-12 items-center justify-center gap-1.5 rounded-xl border border-amber-300/15 bg-amber-300/5 px-3 text-xs font-black text-amber-300" aria-label={score.label}>
             <span aria-hidden="true">◆</span> {score.value}
           </div>
         )}

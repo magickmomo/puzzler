@@ -667,6 +667,7 @@ export function FlagBlitz({
       <GameHeader
         title={headerTitle}
         isPlaying={roundState === "playing"}
+        showDivider={roundState === "playing" || roundState === "answered" || roundState === "paused"}
         score={headerScore}
         pauseDisabled={removingCode !== null}
         onBack={abandonGame}

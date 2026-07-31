@@ -142,9 +142,9 @@ export function CountrySilhouettes({ onBack }: { onBack: () => void }) {
   }
 
   const header = (
-    <header className="flex min-h-14 items-center justify-between gap-3">
-      <button type="button" onClick={abandonRound} className="flex min-h-12 items-center gap-2 rounded-xl px-2 text-sm font-bold text-slate-400 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"><span aria-hidden="true">←</span> Back to Hub</button>
-      <p className="text-center text-base font-black tracking-tight text-white">Country Silhouettes</p>
+    <header className="relative flex min-h-14 items-center justify-between gap-3">
+      <button type="button" onClick={abandonRound} className="relative z-10 flex min-h-12 items-center gap-2 rounded-xl px-2 text-sm font-bold text-slate-400 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"><span aria-hidden="true">←</span> Back to Hub</button>
+      <p className="pointer-events-none absolute left-1/2 top-1/2 max-w-[55%] -translate-x-1/2 -translate-y-1/2 truncate text-center text-base font-black tracking-tight text-white">Country Silhouettes</p>
       <span className="min-w-12" aria-hidden="true" />
     </header>
   );

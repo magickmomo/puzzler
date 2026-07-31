@@ -258,9 +258,9 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
   if (roundState === "waiting") {
     return (
       <main className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col px-5 pb-10 pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-8">
-        <header className="flex min-h-14 items-center justify-between gap-3">
-          <button type="button" onClick={onBack} className="flex min-h-12 items-center gap-2 rounded-xl px-2 text-sm font-bold text-slate-400 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"><span aria-hidden="true">←</span> Back to Hub</button>
-          <p className="text-base font-black tracking-tight text-white">Match Capital Cities</p>
+        <header className="relative flex min-h-14 items-center justify-between gap-3">
+          <button type="button" onClick={onBack} className="relative z-10 flex min-h-12 items-center gap-2 rounded-xl px-2 text-sm font-bold text-slate-400 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"><span aria-hidden="true">←</span> Back to Hub</button>
+          <p className="pointer-events-none absolute left-1/2 top-1/2 max-w-[55%] -translate-x-1/2 -translate-y-1/2 truncate text-center text-base font-black tracking-tight text-white">Match Capital Cities</p>
           <span className="min-w-12" aria-hidden="true" />
         </header>
         <section className="flex flex-1 flex-col justify-center py-10 text-center" aria-labelledby="capital-ready-title">
@@ -277,11 +277,11 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
   if (roundState === "complete") {
     return (
       <main className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col px-5 pb-10 pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-8">
-        <header className="flex min-h-14 items-center justify-between gap-3">
-          <button type="button" onClick={abandonRun} className="flex min-h-12 items-center gap-2 rounded-xl px-2 text-sm font-bold text-slate-400 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300">
+        <header className="relative flex min-h-14 items-center justify-between gap-3">
+          <button type="button" onClick={abandonRun} className="relative z-10 flex min-h-12 items-center gap-2 rounded-xl px-2 text-sm font-bold text-slate-400 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300">
             <span aria-hidden="true">←</span> Back to Hub
           </button>
-          <p className="text-base font-black tracking-tight text-white">Match Capital Cities</p>
+          <p className="pointer-events-none absolute left-1/2 top-1/2 max-w-[55%] -translate-x-1/2 -translate-y-1/2 truncate text-center text-base font-black tracking-tight text-white">Match Capital Cities</p>
           <span className="min-w-12" aria-hidden="true" />
         </header>
 
@@ -316,12 +316,12 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
 
   return (
     <main className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-8">
-      <header className="flex min-h-14 items-center justify-between gap-3">
-        <button type="button" onClick={abandonRun} className="flex min-h-12 items-center gap-2 rounded-xl px-2 text-sm font-bold text-slate-400 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300">
+      <header className="relative flex min-h-14 items-center justify-between gap-3">
+        <button type="button" onClick={abandonRun} className="relative z-10 flex min-h-12 items-center gap-2 rounded-xl px-2 text-sm font-bold text-slate-400 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300">
           <span aria-hidden="true">←</span> Back to Hub
         </button>
-        <p className="text-center text-base font-black tracking-tight text-white">Match Capital Cities</p>
-        <div className="flex items-center gap-2">
+        <p className="pointer-events-none absolute left-1/2 top-1/2 max-w-[55%] -translate-x-1/2 -translate-y-1/2 truncate text-center text-base font-black tracking-tight text-white">Match Capital Cities</p>
+        <div className="relative z-10 flex items-center gap-2">
           <button type="button" disabled={resolvingPair !== null} onClick={pauseRun} className="min-h-10 rounded-xl border border-violet-300/40 bg-violet-300/10 px-3 text-xs font-black text-violet-200 transition hover:bg-violet-300/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 disabled:cursor-not-allowed disabled:opacity-50">Pause</button>
           <GameTimer durationMs={elapsedMs} mode="elapsed" tone="violet" />
         </div>
