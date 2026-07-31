@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import { AnalyticsConsentProvider } from "@/components/analytics/AnalyticsConsentProvider";
 import "./globals.css";
 
@@ -21,6 +22,7 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <AnalyticsConsentProvider>{children}</AnalyticsConsentProvider>
+        <Analytics />
       </body>
     </html>
   );
