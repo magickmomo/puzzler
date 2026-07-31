@@ -23,6 +23,15 @@ describe("capital matching", () => {
     expect(new Set(board.pairs.map((pair) => pair.code)).size).toBe(CAPITAL_MATCH_PAIR_COUNT);
     expect(new Set(board.countries.map((pair) => pair.code))).toEqual(new Set(board.pairs.map((pair) => pair.code)));
     expect(new Set(board.capitals.map((pair) => pair.code))).toEqual(new Set(board.pairs.map((pair) => pair.code)));
+    expect(new Set(board.pairs.map((pair) => pair.capital.toLocaleLowerCase()))).toHaveLength(CAPITAL_MATCH_PAIR_COUNT);
+  });
+
+  it("does not put identical capital labels on the same board", () => {
+    const londonPairs = CAPITAL_MATCH_PAIRS.filter((pair) => pair.capital === "London");
+    const otherPairs = CAPITAL_MATCH_PAIRS.filter((pair) => pair.capital !== "London").slice(0, CAPITAL_MATCH_PAIR_COUNT - 1);
+    const board = createCapitalMatchBoard([...londonPairs, ...otherPairs]);
+
+    expect(board.pairs.filter((pair) => pair.capital === "London")).toHaveLength(1);
   });
 
   it("matches cards only when they belong to the same country", () => {

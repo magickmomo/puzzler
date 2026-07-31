@@ -23,7 +23,7 @@ describe("player-record migration", () => {
         bestClassicScore: 9,
         bestUnlimitedStreak: 17,
         bestSpeedMatchTimeMs: null,
-        bestSpeedMatchUnlimitedScore: 31,
+        bestSpeedMatchUnlimitedScore: 0,
         flagStatsByMode: {
           classic: {
             br: { attempts: 3, correct: 1, wrong: 2 },
@@ -87,5 +87,29 @@ describe("player-record migration", () => {
 
     expect(migrated.flagBlitz.flagStatsByMode["flag-match-unlimited"].br).toEqual({ attempts: 2, correct: 1, wrong: 1 });
     expect(migrated.flagBlitz.flagStatsByMode).not.toHaveProperty("speed-match-unlimited");
+  });
+
+  it("adopts sovereign-nations-only defaults for untouched existing settings", () => {
+    const migrated = migratePlayerRecords({
+      flagBlitz: { settings: { excludedCountryCodes: [] } },
+    }, 5);
+
+    expect(migrated.flagBlitz.settings.excludedCountryCodes).toEqual(["gb-eng", "gb-nir", "gb-sct", "gb-wls"]);
+  });
+
+  it("keeps customised existing flag settings", () => {
+    const migrated = migratePlayerRecords({
+      flagBlitz: { settings: { excludedCountryCodes: ["br"] } },
+    }, 5);
+
+    expect(migrated.flagBlitz.settings).toEqual({ excludedCountryCodes: ["br"] });
+  });
+
+  it("clears the legacy Flag Marathon record because it mixed timed and practice scores", () => {
+    const migrated = migratePlayerRecords({
+      flagBlitz: { bestSpeedMatchUnlimitedScore: 31 },
+    }, 6);
+
+    expect(migrated.flagBlitz.bestSpeedMatchUnlimitedScore).toBe(0);
   });
 });

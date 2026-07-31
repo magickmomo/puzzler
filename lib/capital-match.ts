@@ -1,5 +1,5 @@
 import { CAPITAL_MATCH_PAIRS, type CapitalMatchPair } from "@/app/data/capitals";
-import { shuffle } from "./flag-quiz";
+import { shuffle, type RandomSource } from "./flag-quiz";
 
 export const CAPITAL_MATCH_PAIR_COUNT = 10;
 export const WRONG_CAPITAL_MATCH_PENALTY_MS = 2_000;
@@ -12,13 +12,21 @@ export type CapitalMatchBoard = {
 
 export function createCapitalMatchBoard(
   pairs: readonly CapitalMatchPair[] = CAPITAL_MATCH_PAIRS,
+  random: RandomSource = Math.random,
 ): CapitalMatchBoard {
-  const selectedPairs = shuffle(pairs).slice(0, CAPITAL_MATCH_PAIR_COUNT);
+  const capitalLabels = new Set<string>();
+  const selectedPairs = shuffle(pairs, random).filter((pair) => {
+    const capitalLabel = pair.capital.trim().toLocaleLowerCase();
+    if (capitalLabels.has(capitalLabel)) return false;
+
+    capitalLabels.add(capitalLabel);
+    return true;
+  }).slice(0, CAPITAL_MATCH_PAIR_COUNT);
 
   return {
     pairs: selectedPairs,
-    countries: shuffle(selectedPairs),
-    capitals: shuffle(selectedPairs),
+    countries: shuffle(selectedPairs, random),
+    capitals: shuffle(selectedPairs, random),
   };
 }
 

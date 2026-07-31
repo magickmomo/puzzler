@@ -9,11 +9,11 @@ const emptyScores = {
 };
 
 describe("player records", () => {
-  it("keeps timed Speed Match completion times and untimed scores separate", () => {
+  it("keeps Speed Match completion times and timed Flag Marathon scores separate", () => {
     const timed = getUpdatedBestScores(emptyScores, "speed-match", 10, 18_400);
-    const untimed = getUpdatedBestScores(timed, "flag-match-unlimited", 25);
+    const marathon = getUpdatedBestScores(timed, "flag-match-unlimited", 25);
 
-    expect(untimed).toEqual({
+    expect(marathon).toEqual({
       bestClassicScore: 0,
       bestUnlimitedStreak: 0,
       bestSpeedMatchTimeMs: 18_400,
@@ -29,7 +29,7 @@ describe("player records", () => {
     expect(incompleteBoard.bestSpeedMatchTimeMs).toBe(12_650);
   });
 
-  it("never lowers an existing untimed record", () => {
+  it("never lowers an existing Flag Marathon record", () => {
     expect(getUpdatedBestScores({ ...emptyScores, bestSpeedMatchUnlimitedScore: 12 }, "flag-match-unlimited", 8).bestSpeedMatchUnlimitedScore).toBe(12);
   });
 });

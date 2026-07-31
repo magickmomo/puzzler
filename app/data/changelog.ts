@@ -8,6 +8,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: readonly ChangelogEntry[] = [
   {
+    date: "July 31, 2026",
+    title: "New game: Country Silhouettes",
+    summary: "Country Silhouettes is a new outline-guessing game, joined by clearer defaults and fairer scoring across the arcade.",
+    highlights: [
+      "Introducing Country Silhouettes: identify ten sovereign states from their outlines, with no timer.",
+      "Correct and incorrect answer feedback is now consistent between Flag Classic and Country Silhouettes.",
+      "Capital Cities now starts when you’re ready and never shows duplicate capital labels in the same board.",
+      "Flag Blitz now starts with sovereign states only, while untimed Flag Marathon is clearly marked as unranked practice.",
+    ],
+  },
+  {
     date: "July 30, 2026",
     title: "Improved analytics",
     summary: "Optional, privacy-friendly analytics now provide better insight into how players discover, start, and complete games.",
