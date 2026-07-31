@@ -35,7 +35,7 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
   const recordResult = usePuzzlerStore((state) => state.recordCapitalCitiesResult);
   const bestTimeMs = usePuzzlerStore((state) => state.capitalCities.bestTimeMs);
   const totalPlays = usePuzzlerStore((state) => state.capitalCities.totalPlays);
-  const { analyticsConsentGranted, analyticsReady, consentResolved } = useCookieSettings();
+  const { analyticsConsentGranted, analyticsReady } = useCookieSettings();
   const [board, setBoard] = useState(() => createCapitalMatchBoard());
   const [roundState, setRoundState] = useState<RoundState>("waiting");
   const [selectedCountryCode, setSelectedCountryCode] = useState<string | null>(null);
@@ -46,8 +46,7 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
   const [elapsedMs, setElapsedMs] = useState(0);
   const startedAtRef = useRef<number | null>(null);
   const resolutionTimerRef = useRef<number | null>(null);
-  const initialRunStartedRef = useRef(false);
-  const initialGameStartedTrackedRef = useRef(false);
+  const gameStartedTrackedRef = useRef(false);
   const activeRunRef = useRef(false);
   const mistakesRef = useRef(0);
   const attemptsRef = useRef(0);
@@ -68,16 +67,9 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
   useEffect(() => () => clearResolutionTimer(), []);
 
   useEffect(() => {
-    if (!consentResolved || initialRunStartedRef.current) return;
+    if (!activeRunRef.current || !analyticsReady || !analyticsConsentGranted || gameStartedTrackedRef.current) return;
 
-    initialRunStartedRef.current = true;
-    startRun();
-  }, [consentResolved]);
-
-  useEffect(() => {
-    if (!activeRunRef.current || !analyticsReady || !analyticsConsentGranted || initialGameStartedTrackedRef.current) return;
-
-    initialGameStartedTrackedRef.current = true;
+    gameStartedTrackedRef.current = true;
     void trackGameStarted({ game: "capital_cities", game_run_number: gameRunNumberRef.current });
   }, [analyticsConsentGranted, analyticsReady]);
 
@@ -97,6 +89,7 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
     clearResolutionTimer();
     startedAtRef.current = Date.now();
     activeRunRef.current = true;
+    gameStartedTrackedRef.current = isReplay;
     mistakesRef.current = 0;
     attemptsRef.current = 0;
     gameRunNumberRef.current = totalPlays + 1;
@@ -216,6 +209,25 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
   const activeCountries = board.countries.filter((pair) => !matchedCodes.includes(pair.code));
   const activeCapitals = board.capitals.filter((pair) => !matchedCodes.includes(pair.code));
   const pairsRemaining = board.pairs.length - matchedCodes.length;
+
+  if (roundState === "waiting") {
+    return (
+      <main className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col px-5 pb-10 pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-8">
+        <header className="flex min-h-14 items-center justify-between gap-3">
+          <button type="button" onClick={onBack} className="flex min-h-12 items-center gap-2 rounded-xl px-2 text-sm font-bold text-slate-400 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"><span aria-hidden="true">←</span> Back to Hub</button>
+          <p className="text-base font-black tracking-tight text-white">Match Capital Cities</p>
+          <span className="min-w-12" aria-hidden="true" />
+        </header>
+        <section className="flex flex-1 flex-col justify-center py-10 text-center" aria-labelledby="capital-ready-title">
+          <div className="mx-auto grid h-24 w-24 place-items-center rounded-3xl border border-violet-300/30 bg-violet-400/10 text-4xl shadow-glow" aria-hidden="true">🏛</div>
+          <p className="mt-7 text-xs font-black uppercase tracking-[0.25em] text-violet-300">Capital Cities</p>
+          <h1 id="capital-ready-title" className="mt-2 text-4xl font-black tracking-tight text-white">Match the pairs</h1>
+          <p className="mx-auto mt-3 max-w-sm text-base leading-7 text-slate-400">Match ten countries with their capitals. Correct pairs clear the board; each miss adds 2 seconds. Your time starts when you&apos;re ready.</p>
+          <button type="button" autoFocus onClick={() => startRun()} className="mx-auto mt-8 min-h-14 w-full max-w-sm rounded-2xl bg-violet-300 px-5 font-black text-slate-950 transition hover:bg-violet-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-100 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">Ready — start timer</button>
+        </section>
+      </main>
+    );
+  }
 
   if (roundState === "complete") {
     return (

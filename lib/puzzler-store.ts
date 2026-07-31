@@ -98,10 +98,16 @@ export function migratePlayerRecords(persistedState: unknown, version: number): 
     const persistedFlagBlitz = persisted.flagBlitz ?? {};
     const { bestSpeedMatchScore: _retiredSpeedScore, ...flagBlitz } = persistedFlagBlitz;
 
+    const settings = version < 6 && flagBlitz.settings?.excludedCountryCodes.length === 0
+      ? flagBlitzDefaults.settings
+      : flagBlitz.settings ?? flagBlitzDefaults.settings;
+
     return {
       flagBlitz: {
         ...flagBlitzDefaults,
         ...flagBlitz,
+        bestSpeedMatchUnlimitedScore: version < 7 ? 0 : flagBlitz.bestSpeedMatchUnlimitedScore ?? flagBlitzDefaults.bestSpeedMatchUnlimitedScore,
+        settings,
         bestSpeedMatchTimeMs: flagBlitz.bestSpeedMatchTimeMs ?? flagBlitzDefaults.bestSpeedMatchTimeMs,
         flagStatsByMode: migrateFlagStatsByMode(flagBlitz.flagStatsByMode),
       },
@@ -121,9 +127,11 @@ export function migratePlayerRecords(persistedState: unknown, version: number): 
       totalPlays: legacy.totalPlays ?? flagBlitzDefaults.totalPlays,
       bestClassicScore: legacy.bestClassicScore ?? flagBlitzDefaults.bestClassicScore,
       bestUnlimitedStreak: legacy.bestUnlimitedStreak ?? flagBlitzDefaults.bestUnlimitedStreak,
-      bestSpeedMatchUnlimitedScore: legacy.bestSpeedMatchUnlimitedScore ?? flagBlitzDefaults.bestSpeedMatchUnlimitedScore,
+      bestSpeedMatchUnlimitedScore: version < 7 ? 0 : legacy.bestSpeedMatchUnlimitedScore ?? flagBlitzDefaults.bestSpeedMatchUnlimitedScore,
       flagStatsByMode: migrateFlagStatsByMode(legacy.flagStatsByMode),
-      settings: legacy.settings ?? flagBlitzDefaults.settings,
+      settings: legacy.settings?.excludedCountryCodes.length === 0
+        ? flagBlitzDefaults.settings
+        : legacy.settings ?? flagBlitzDefaults.settings,
     },
     capitalCities: capitalCitiesDefaults,
   };
@@ -174,7 +182,7 @@ export const usePuzzlerStore = create<PuzzlerStore>()(
     }),
     {
       name: "puzzler-player-records",
-      version: 5,
+      version: 7,
       migrate: migratePlayerRecords,
       partialize: (state) => ({ flagBlitz: state.flagBlitz, capitalCities: state.capitalCities }),
     },

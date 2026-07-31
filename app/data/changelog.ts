@@ -8,6 +8,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG_ENTRIES: readonly ChangelogEntry[] = [
   {
+    date: "July 31, 2026",
+    title: "Country Silhouettes and fairer rounds",
+    summary: "A new outline-guessing game joins Puzzler, alongside clearer defaults and fairer scoring across the arcade.",
+    highlights: [
+      "Country Silhouettes challenges you to identify ten of the world’s 195 sovereign states from their outlines, with no timer.",
+      "Sharper outlines now make the smallest states, including Monaco and Vatican City, more recognisable.",
+      "Correct and incorrect answer feedback is now consistent between Flag Classic and Country Silhouettes.",
+      "Capital Cities now starts when you’re ready and never shows duplicate capital labels in the same board.",
+      "Flag Blitz now starts with sovereign states only, while untimed Flag Marathon is clearly marked as unranked practice.",
+    ],
+  },
+  {
     date: "July 30, 2026",
     title: "Improved analytics",
     summary: "Optional, privacy-friendly analytics now provide better insight into how players discover, start, and complete games.",
