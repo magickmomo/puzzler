@@ -25,7 +25,7 @@ import {
   type GameMode,
   type RandomSource,
 } from "@/lib/flag-quiz";
-import { FLAG_MATCH_CHALLENGE_VERSION, createFlagMatchChallengeUrl, getFlagMatchChallengeOutcome, orderFlagMatchChallengePool, type FlagMatchChallenge } from "@/lib/flag-challenge";
+import { getFlagMatchChallengeOutcome, orderFlagMatchChallengePool, type FlagMatchChallenge } from "@/lib/flag-challenge";
 import { formatSeconds } from "@/lib/player-records";
 import { usePuzzlerStore } from "@/lib/puzzler-store";
 import {
@@ -42,8 +42,6 @@ import {
   trackReplayStarted,
   trackFlagMatchChallengeCompleted,
   trackFlagMatchChallengeOpened,
-  trackFlagMatchChallengeReshared,
-  trackFlagMatchChallengeShared,
   trackFlagMatchChallengeStarted,
   type AnalyticsDifficulty,
   type GameEndReason,
@@ -77,29 +75,11 @@ function isTimedSpeedMatchRun(gameMode: GameMode | null, speedMatchUnlimitedTime
   return gameMode === "speed-match" || (gameMode === "flag-match-unlimited" && speedMatchUnlimitedTimed);
 }
 
-async function copyChallengeLink(url: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(url);
-    return true;
-  } catch {
-    const input = document.createElement("textarea");
-    input.value = url;
-    input.setAttribute("readonly", "");
-    input.className = "fixed -left-full top-0";
-    document.body.append(input);
-    input.select();
-    const copied = document.execCommand("copy");
-    input.remove();
-    return copied;
-  }
-}
-
 export function FlagBlitz({
   onBack,
   onOpenReport,
   onOpenSettings,
   entry = "standard",
-  onExploreModes,
   onSelectFlagMatchUnlimited,
   challenge,
 }: {
@@ -107,7 +87,6 @@ export function FlagBlitz({
   onOpenReport: () => void;
   onOpenSettings: () => void;
   entry?: FlagBlitzEntry;
-  onExploreModes?: () => void;
   onSelectFlagMatchUnlimited?: () => void;
   challenge?: FlagMatchChallenge;
 }) {
@@ -121,7 +100,6 @@ export function FlagBlitz({
   const [questions, setQuestions] = useState<ReturnType<typeof createQuestionDeck>>([]);
   const [multipleChoiceOptions, setMultipleChoiceOptions] = useState<Country[]>([]);
   const [countryPool, setCountryPool] = useState<Country[]>([]);
-  const [runSeed, setRunSeed] = useState<string | null>(null);
   const [speedMatchTargets, setSpeedMatchTargets] = useState<ReturnType<typeof createQuestionDeck>>([]);
   const [speedMatchColumns, setSpeedMatchColumns] = useState<Country[][]>([]);
   const [speedMatchQueuedFlags, setSpeedMatchQueuedFlags] = useState<Array<Country | null>>([]);
@@ -329,7 +307,6 @@ export function FlagBlitz({
     setQuestions(nextQuestions);
     setMultipleChoiceOptions(nextMultipleChoiceOptions);
     setCountryPool(nextCountryPool);
-    setRunSeed(nextSeed);
     randomRef.current = random;
     setSpeedMatchTargets(selectedGameMode === "speed-match" ? createSpeedMatchTargetDeck(nextQuestions, random) : []);
     setSpeedMatchColumns(initialColumns);
@@ -384,66 +361,6 @@ export function FlagBlitz({
     beginGame("flag-match-unlimited", null, true, challenge
       ? { seed: challenge.seed, countryPool: challenge.countryPool }
       : undefined);
-  }
-
-  function getShareChallenge(): FlagMatchChallenge | null {
-    if (!runSeed || gameMode !== "flag-match-unlimited" || !speedMatchUnlimitedTimed || runDurationMs === null) return null;
-
-    return {
-      version: challenge?.version ?? FLAG_MATCH_CHALLENGE_VERSION,
-      seed: challenge?.seed ?? runSeed,
-      challengerScore: score,
-      challengerDurationMs: runDurationMs,
-      challengerMistakes: mistakes,
-      countryPool: challenge?.countryPool ?? countryPool,
-    };
-  }
-
-  function getFlagMatchChallengeUrl(): string | null {
-    const challengeToShare = getShareChallenge();
-    return challengeToShare ? createFlagMatchChallengeUrl(window.location.origin, challengeToShare) : null;
-  }
-
-  function trackChallengeShare(method: "native" | "copy") {
-    if (runDurationMs === null || !countryPool.length) return;
-    const properties = {
-      pool_size: countryPool.length,
-      score,
-      duration_ms: runDurationMs,
-      mistakes,
-      share_method: method,
-    };
-
-    if (challenge) void trackFlagMatchChallengeReshared(properties);
-    else void trackFlagMatchChallengeShared(properties);
-  }
-
-  async function shareFlagMatchChallenge(): Promise<"shared" | null> {
-    const url = getFlagMatchChallengeUrl();
-    const challengeToShare = getShareChallenge();
-    if (!url || !challengeToShare || !navigator.share) return null;
-
-    const shareData = {
-      title: "Flag Marathon challenge",
-      text: `I found ${challengeToShare.challengerScore} of ${challengeToShare.countryPool.length} flags in ${formatSeconds(challengeToShare.challengerDurationMs)} with ${challengeToShare.challengerMistakes} mistakes. Can you beat me?`,
-      url,
-    };
-
-    try {
-      await navigator.share(shareData);
-      trackChallengeShare("native");
-      return "shared";
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") return null;
-      return null;
-    }
-  }
-
-  async function copyFlagMatchChallengeLink(): Promise<boolean> {
-    const url = getFlagMatchChallengeUrl();
-    const copied = url ? await copyChallengeLink(url) : false;
-    if (copied) trackChallengeShare("copy");
-    return copied;
   }
 
   function submitAnswer(value: string) {
@@ -750,6 +667,7 @@ export function FlagBlitz({
       <GameHeader
         title={headerTitle}
         isPlaying={roundState === "playing"}
+        showDivider={roundState === "playing" || roundState === "answered" || roundState === "paused"}
         score={headerScore}
         pauseDisabled={removingCode !== null}
         onBack={abandonGame}
@@ -850,11 +768,7 @@ export function FlagBlitz({
               : undefined);
           }}
           onHub={onBack}
-          secondaryActionLabel={entry === "flag-match-challenge" ? "Explore other games/modes" : undefined}
-          onSecondaryAction={entry === "flag-match-challenge" ? onExploreModes : undefined}
           challenge={challenge}
-          onShareChallenge={gameMode === "flag-match-unlimited" && speedMatchUnlimitedTimed && runSeed ? shareFlagMatchChallenge : undefined}
-          onCopyChallengeLink={gameMode === "flag-match-unlimited" && speedMatchUnlimitedTimed && runSeed ? copyFlagMatchChallengeLink : undefined}
         />
       )}
       {roundState === "paused" && gameMode && (

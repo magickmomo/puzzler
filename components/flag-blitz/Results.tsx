@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import type { Difficulty, GameMode } from "@/lib/flag-quiz";
 import { formatSeconds } from "@/lib/player-records";
 import { getFlagMatchChallengeOutcome, type FlagMatchChallenge } from "@/lib/flag-challenge";
+import { ShareResultButton } from "@/components/gameplay/ShareResultButton";
 
 export function Results({
   gameMode,
@@ -17,11 +17,7 @@ export function Results({
   difficulty,
   onReplay,
   onHub,
-  secondaryActionLabel = "Back to Hub",
-  onSecondaryAction,
   challenge,
-  onShareChallenge,
-  onCopyChallengeLink,
 }: {
   gameMode: GameMode;
   score: number;
@@ -34,14 +30,8 @@ export function Results({
   difficulty: Difficulty | null;
   onReplay: () => void;
   onHub: () => void;
-  secondaryActionLabel?: string;
-  onSecondaryAction?: () => void;
   challenge?: FlagMatchChallenge;
-  onShareChallenge?: () => Promise<"shared" | "copied" | null>;
-  onCopyChallengeLink?: () => Promise<boolean>;
 }) {
-  const [shareStatus, setShareStatus] = useState<"shared" | "copied" | null>(null);
-  const [canNativeShare, setCanNativeShare] = useState(false);
   const isUnlimited = gameMode === "unlimited";
   const isSpeedMatchUnlimited = gameMode === "flag-match-unlimited";
   const isSpeedMatch = gameMode === "speed-match" || isSpeedMatchUnlimited;
@@ -62,23 +52,13 @@ export function Results({
       : challengeOutcome === "loss"
         ? "The challenger keeps the lead."
         : "It’s a draw.";
-  const hasChallengeAction = Boolean(onCopyChallengeLink || (onShareChallenge && canNativeShare));
-
-  useEffect(() => {
-    setCanNativeShare(typeof navigator.share === "function");
-  }, []);
-
-  async function shareChallenge() {
-    if (!onShareChallenge) return;
-    setShareStatus(null);
-    setShareStatus(await onShareChallenge());
-  }
-
-  async function copyChallengeLink() {
-    if (!onCopyChallengeLink) return;
-    setShareStatus(null);
-    if (await onCopyChallengeLink()) setShareStatus("copied");
-  }
+  const shareMessage = isSpeedMatchUnlimited
+    ? `I identified ${score} flags with ${mistakes} ${mistakes === 1 ? "mistake" : "mistakes"} on Puzzler Flag Marathon.`
+    : isSpeedMatch
+      ? `I identified ${score}/${total} flags in ${formatSeconds(completedSpeedMatch ? speedMatchCompletionTimeMs : runDurationMs)} on Puzzler Speed Match.`
+      : isUnlimited
+        ? `I identified ${score} flags on Puzzler Flag Classic Unlimited.`
+        : `I scored ${score}/${total} on Puzzler Flag Classic.`;
 
   return (
     <section className="flex flex-1 flex-col justify-center py-10 text-center" aria-labelledby="results-title">
@@ -142,11 +122,9 @@ export function Results({
         )}
       </div>
       <div className="mx-auto mt-8 w-full max-w-sm space-y-3">
-        {onShareChallenge && canNativeShare && <button type="button" onClick={shareChallenge} className="min-h-14 w-full rounded-2xl bg-cyan-300 px-5 font-black text-slate-950 transition hover:bg-cyan-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-100 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">Share challenge</button>}
-        {onCopyChallengeLink && <button type="button" onClick={copyChallengeLink} className={`min-h-14 w-full rounded-2xl px-5 font-black transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950 ${canNativeShare ? "border border-slate-700 bg-slate-900 text-white hover:bg-slate-800 focus-visible:ring-slate-400" : "bg-cyan-300 text-slate-950 hover:bg-cyan-200 focus-visible:ring-cyan-100"}`}>Copy challenge link</button>}
-        {shareStatus && <p className="text-center text-sm font-bold text-emerald-300" aria-live="polite">{shareStatus === "copied" ? "Challenge link copied" : "Share sheet opened"}</p>}
-        <button type="button" onClick={onReplay} className={`min-h-14 w-full rounded-2xl px-5 font-black transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950 ${hasChallengeAction ? "border border-slate-700 bg-slate-900 text-white hover:bg-slate-800 focus-visible:ring-slate-400" : "bg-cyan-300 text-slate-950 hover:bg-cyan-200 focus-visible:ring-cyan-100"}`}>Play again</button>
-        <button type="button" onClick={onSecondaryAction ?? onHub} className="min-h-14 w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 font-black text-white transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400">{secondaryActionLabel}</button>
+        <ShareResultButton message={shareMessage} path="/flag-blitz" tone="cyan" />
+        <button type="button" onClick={onReplay} className="min-h-14 w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 font-black text-white transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400">Play again</button>
+        <button type="button" onClick={onHub} className="min-h-14 w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 font-black text-white transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400">Try another game</button>
       </div>
     </section>
   );
