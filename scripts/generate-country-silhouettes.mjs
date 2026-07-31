@@ -73,7 +73,17 @@ function toPath(rings) {
       latitude,
     ]);
   });
-  const points = adjustedRings.flat();
+  const unprojectedPoints = adjustedRings.flat();
+  const unprojectedLatitudes = unprojectedPoints.map(([, latitude]) => latitude);
+  const centreLatitude = (Math.min(...unprojectedLatitudes) + Math.max(...unprojectedLatitudes)) / 2;
+  // Longitude degrees become physically narrower away from the equator. Apply a
+  // local equirectangular projection before fitting each country to the card.
+  const longitudeScale = Math.cos(centreLatitude * Math.PI / 180);
+  const projectedRings = adjustedRings.map((ring) => ring.map(([longitude, latitude]) => [
+    longitude * longitudeScale,
+    latitude,
+  ]));
+  const points = projectedRings.flat();
   const longitudes = points.map(([longitude]) => longitude);
   const latitudes = points.map(([, latitude]) => latitude);
   const minLongitude = Math.min(...longitudes);
@@ -87,7 +97,7 @@ function toPath(rings) {
   const offsetY = (100 - height * scale) / 2;
   const format = (value) => Number(value.toFixed(2));
 
-  return adjustedRings.map((ring) => ring.map(([longitude, latitude], index) => (
+  return projectedRings.map((ring) => ring.map(([longitude, latitude], index) => (
     `${index === 0 ? "M" : "L"}${format(offsetX + (longitude - minLongitude) * scale)} ${format(offsetY + (maxLatitude - latitude) * scale)}`
   )).join("") + "Z").join("");
 }
