@@ -65,7 +65,7 @@ export function CountrySilhouettes({ onBack }: { onBack: () => void }) {
         {header}
         <section className="flex flex-1 flex-col justify-center py-10 text-center" aria-labelledby="silhouette-intro-title">
           <div className="mx-auto grid h-24 w-24 place-items-center rounded-3xl border border-amber-300/30 bg-amber-400/10 text-4xl shadow-glow" aria-hidden="true">◒</div>
-          <p className="mt-7 text-xs font-black uppercase tracking-[0.25em] text-amber-300">195 sovereign states</p>
+          <p className="mt-7 text-xs font-black uppercase tracking-[0.25em] text-amber-300">193 sovereign states</p>
           <h1 id="silhouette-intro-title" className="mt-2 text-4xl font-black tracking-tight text-white">Know the shape?</h1>
           <p className="mx-auto mt-3 max-w-sm text-base leading-7 text-slate-400">Identify ten country outlines. There&apos;s no timer—take a close look and trust your geography instincts.</p>
           <button type="button" autoFocus onClick={startRound} className="mx-auto mt-8 min-h-14 w-full max-w-sm rounded-2xl bg-amber-300 px-5 font-black text-slate-950 transition hover:bg-amber-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-100 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">Start round</button>

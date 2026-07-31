@@ -3,9 +3,13 @@ import { COUNTRY_SILHOUETTE_PATHS } from "@/app/data/country-silhouettes";
 import { shuffle } from "./flag-quiz";
 
 export const COUNTRY_SILHOUETTE_QUESTION_COUNT = 10;
+const TEMPORARILY_DISABLED_COUNTRY_CODES = new Set(["mh", "tv"]);
 
 export function getSilhouetteCountries(): Country[] {
-  return SOVEREIGN_NATIONS.filter((country) => COUNTRY_SILHOUETTE_PATHS[country.code]);
+  return SOVEREIGN_NATIONS.filter((country) => (
+    COUNTRY_SILHOUETTE_PATHS[country.code]
+    && !TEMPORARILY_DISABLED_COUNTRY_CODES.has(country.code)
+  ));
 }
 
 export function createSilhouetteQuestions(): Country[] {

@@ -12,7 +12,7 @@ export const CHANGELOG_ENTRIES: readonly ChangelogEntry[] = [
     title: "Country Silhouettes and fairer rounds",
     summary: "A new outline-guessing game joins Puzzler, alongside clearer defaults and fairer scoring across the arcade.",
     highlights: [
-      "Country Silhouettes challenges you to identify ten of the world’s 195 sovereign states from their outlines, with no timer.",
+      "Country Silhouettes challenges you to identify ten sovereign states from their outlines, with no timer.",
       "Sharper outlines now make the smallest states, including Monaco and Vatican City, more recognisable.",
       "Correct and incorrect answer feedback is now consistent between Flag Classic and Country Silhouettes.",
       "Capital Cities now starts when you’re ready and never shows duplicate capital labels in the same board.",
