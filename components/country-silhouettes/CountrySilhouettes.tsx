@@ -8,6 +8,7 @@ import type { AnswerOutcome } from "@/components/gameplay/answer-outcome";
 import { COUNTRY_SILHOUETTE_QUESTION_COUNT, createSilhouetteOptions, createSilhouetteQuestions } from "@/lib/country-silhouettes";
 import { trackFirstGameCompletion, trackGameAbandoned, trackGameCompleted, trackGameStarted, trackReplayStarted } from "@/lib/analytics";
 import { useCookieSettings } from "@/components/analytics/AnalyticsConsentProvider";
+import { ShareResultButton } from "@/components/gameplay/ShareResultButton";
 
 type RoundState = "intro" | "loading" | "playing" | "answered" | "results";
 
@@ -176,8 +177,9 @@ export function CountrySilhouettes({ onBack }: { onBack: () => void }) {
           <p className="mt-5 text-5xl font-black text-amber-300">{score}<span className="text-2xl text-slate-600">/{COUNTRY_SILHOUETTE_QUESTION_COUNT}</span></p>
           <p className="mt-2 text-sm font-bold text-slate-500">Correct silhouettes</p>
           <div className="mx-auto mt-8 w-full max-w-sm space-y-3">
-            <button type="button" onClick={() => void startRound(true)} className="min-h-14 w-full rounded-2xl bg-amber-300 px-5 font-black text-slate-950 transition hover:bg-amber-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-100 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">Play again</button>
-            <button type="button" onClick={abandonRound} className="min-h-14 w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 font-black text-white transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400">Back to Hub</button>
+            <ShareResultButton message={`I identified ${score}/${COUNTRY_SILHOUETTE_QUESTION_COUNT} country silhouettes on Puzzler.`} path="/country-silhouettes" tone="amber" />
+            <button type="button" onClick={() => void startRound(true)} className="min-h-14 w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 font-black text-white transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400">Play again</button>
+            <button type="button" onClick={abandonRound} className="min-h-14 w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 font-black text-white transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400">Try another game</button>
           </div>
         </section>
       </main>

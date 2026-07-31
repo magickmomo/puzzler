@@ -36,9 +36,7 @@ export function GameHeader({
           </div>
         )}
         {isPlaying && (
-          <button type="button" onClick={onPause} disabled={pauseDisabled} aria-label="Pause game" className="flex min-h-12 items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-950 px-3 text-sm font-black text-cyan-300 transition hover:border-cyan-300 hover:text-cyan-100 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
-            <span aria-hidden="true">Ⅱ</span> Pause
-          </button>
+          <button type="button" onClick={onPause} disabled={pauseDisabled} aria-label="Pause game" className="min-h-10 rounded-xl border border-cyan-300/40 bg-cyan-300/10 px-3 text-xs font-black text-cyan-200 transition hover:bg-cyan-300/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:cursor-not-allowed disabled:opacity-50">Pause</button>
         )}
       </div>
     </header>

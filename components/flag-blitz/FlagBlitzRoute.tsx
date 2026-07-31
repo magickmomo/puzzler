@@ -31,7 +31,6 @@ export function FlagBlitzRoute({
       onOpenSettings={() => router.push("/flag-blitz/settings")}
       entry={entry}
       challenge={challenge}
-      onExploreModes={goToHub}
       onSelectFlagMatchUnlimited={() => router.push("/flag-blitz/flag-match?from=launcher")}
     />
   );
