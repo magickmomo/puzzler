@@ -108,6 +108,11 @@ export default function PrivacyPage() {
               <span key={provider.provider}>{index > 0 ? " · " : ""}<a href={provider.href} target="_blank" rel="noreferrer" className="font-bold text-cyan-300 underline underline-offset-2 hover:text-cyan-100">{provider.linkLabel}</a></span>
             ))}.</p>
           </section>
+
+          <section className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+            <h2 className="text-base font-black text-white">Map data attribution</h2>
+            <p className="mt-2 text-slate-400">Country Silhouettes uses Natural Earth data. Monaco, San Marino, and Vatican City boundaries use <a href="https://www.geoboundaries.org/" target="_blank" rel="noreferrer" className="font-bold text-cyan-300 underline underline-offset-2 hover:text-cyan-100">geoBoundaries</a> data under CC BY 4.0.</p>
+          </section>
         </div>
       </article>
     </main>

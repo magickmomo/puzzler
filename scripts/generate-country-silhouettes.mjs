@@ -12,7 +12,7 @@ const countryCodes = [...countrySource.matchAll(/\["([a-z]{2})",/g)]
   .filter((code) => !code.startsWith("gb-"));
 const countries = JSON.parse(await readFile(inputPath, "utf8"));
 const overrideDirectory = new URL("../app/data/country-silhouette-overrides/", import.meta.url);
-const overrideCodes = ["mc", "va"];
+const overrideCodes = ["mc", "sm", "va"];
 const overrideFeatures = new Map(await Promise.all(overrideCodes.map(async (code) => {
   const data = JSON.parse(await readFile(new URL(`${code}.geojson`, overrideDirectory), "utf8"));
   return [code, data.features[0]];
@@ -110,4 +110,4 @@ const silhouettes = countryCodes.map((code) => {
   return [code, toPath(getHomeRegionPolygons(getPolygons(feature.geometry)).flat())];
 });
 
-await writeFile(outputPath, `// Generated from Natural Earth 10m Admin 0 Countries (public domain).\n// Monaco and Vatican City use high-resolution geoBoundaries gbOpen overrides (CC BY 4.0); see country-silhouette-overrides/README.md.\n// Run: node scripts/generate-country-silhouettes.mjs <source.geojson> app/data/country-silhouettes.ts\n\nexport const COUNTRY_SILHOUETTE_PATHS: Readonly<Record<string, string>> = ${JSON.stringify(Object.fromEntries(silhouettes))};\n`);
+await writeFile(outputPath, `// Generated from Natural Earth 10m Admin 0 Countries (public domain).\n// Monaco, San Marino, and Vatican City use high-resolution geoBoundaries gbOpen overrides (CC BY 4.0); see country-silhouette-overrides/README.md.\n// Run: node scripts/generate-country-silhouettes.mjs <source.geojson> app/data/country-silhouettes.ts\n\nexport const COUNTRY_SILHOUETTE_PATHS: Readonly<Record<string, string>> = ${JSON.stringify(Object.fromEntries(silhouettes))};\n`);

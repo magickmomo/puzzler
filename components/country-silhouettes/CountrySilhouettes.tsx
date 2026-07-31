@@ -69,7 +69,6 @@ export function CountrySilhouettes({ onBack }: { onBack: () => void }) {
           <h1 id="silhouette-intro-title" className="mt-2 text-4xl font-black tracking-tight text-white">Know the shape?</h1>
           <p className="mx-auto mt-3 max-w-sm text-base leading-7 text-slate-400">Identify ten country outlines. There&apos;s no timer—take a close look and trust your geography instincts.</p>
           <button type="button" autoFocus onClick={startRound} className="mx-auto mt-8 min-h-14 w-full max-w-sm rounded-2xl bg-amber-300 px-5 font-black text-slate-950 transition hover:bg-amber-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-100 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">Start round</button>
-          <p className="mx-auto mt-5 max-w-sm text-xs leading-5 text-slate-600">Boundary data: Natural Earth. Monaco and Vatican City: <a href="https://www.geoboundaries.org/" target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-slate-400">geoBoundaries</a> (CC BY 4.0).</p>
         </section>
       </main>
     );

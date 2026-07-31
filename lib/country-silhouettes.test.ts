@@ -16,6 +16,7 @@ describe("Country Silhouettes", () => {
     expect(COUNTRY_SILHOUETTE_PATHS.nl.length).toBeGreaterThan(2_000);
     expect((COUNTRY_SILHOUETTE_PATHS.pt.match(/M/g) ?? []).length).toBeLessThanOrEqual(3);
     expect(COUNTRY_SILHOUETTE_PATHS.mc.length).toBeGreaterThan(5_000);
+    expect(COUNTRY_SILHOUETTE_PATHS.sm.length).toBeGreaterThan(8_000);
     expect(COUNTRY_SILHOUETTE_PATHS.va.length).toBeGreaterThan(1_000);
   });
 
