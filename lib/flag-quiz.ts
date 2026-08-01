@@ -1,4 +1,4 @@
-import { COUNTRIES, type Country } from "@/app/data/countries";
+import { COUNTRIES, SOVEREIGN_NATIONS, type Country } from "@/app/data/countries";
 
 export type Difficulty = "easy" | "medium" | "hard";
 export type GameMode = "classic" | "unlimited" | "speed-match" | "flag-match-unlimited";
@@ -65,7 +65,7 @@ export function shuffle<T>(items: readonly T[], random: RandomSource = Math.rand
     .map(({ item }) => item);
 }
 
-export function createQuestionDeck(gameMode: GameMode, countries: readonly Country[] = COUNTRIES, random: RandomSource = Math.random): Country[] {
+export function createQuestionDeck(gameMode: GameMode, countries: readonly Country[] = SOVEREIGN_NATIONS, random: RandomSource = Math.random): Country[] {
   const deck = shuffle(countries, random);
   return gameMode === "unlimited" || gameMode === "flag-match-unlimited" ? deck : deck.slice(0, QUESTIONS_PER_GAME);
 }
@@ -90,7 +90,7 @@ export function createSpeedMatchUnlimitedColumns(visibleFlags: readonly Country[
   ));
 }
 
-export function createMultipleChoiceOptions(question: Country, countries: readonly Country[] = COUNTRIES, random: RandomSource = Math.random): Country[] {
+export function createMultipleChoiceOptions(question: Country, countries: readonly Country[] = SOVEREIGN_NATIONS, random: RandomSource = Math.random): Country[] {
   const distractors = shuffle(countries.filter((country) => country.code !== question.code), random).slice(0, 3);
   return shuffle([question, ...distractors], random);
 }

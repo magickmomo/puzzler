@@ -1,4 +1,4 @@
-import { COUNTRIES, type Country } from "./countries";
+import { SOVEREIGN_NATIONS, type Country } from "./countries";
 
 export type CapitalMatchPair = Country & {
   capital: string;
@@ -213,7 +213,7 @@ const CAPITAL_DATA: readonly CapitalRecord[] = [
 
 const CAPITALS_BY_COUNTRY_CODE = new Map(CAPITAL_DATA);
 
-export const CAPITAL_MATCH_PAIRS: readonly CapitalMatchPair[] = COUNTRIES.map((country) => {
+export const CAPITAL_MATCH_PAIRS: readonly CapitalMatchPair[] = SOVEREIGN_NATIONS.map((country) => {
   const capital = CAPITALS_BY_COUNTRY_CODE.get(country.code);
 
   if (!capital) {

@@ -1,4 +1,4 @@
-import { COUNTRIES, type Country } from "@/app/data/countries";
+import { COUNTRIES, SOVEREIGN_NATIONS, type Country } from "@/app/data/countries";
 import { MINIMUM_ACTIVE_COUNTRIES } from "@/lib/puzzler-settings";
 
 export const FLAG_MATCH_CHALLENGE_VERSION = "1";
@@ -19,6 +19,7 @@ export const FLAG_MATCH_CHALLENGE_VERSIONS = {
 
 const BASE64URL_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 const COUNTRY_BY_CODE = new Map(COUNTRIES.map((country) => [country.code, country]));
+const PLAYABLE_COUNTRY_CODES = new Set(SOVEREIGN_NATIONS.map((country) => country.code));
 const V1_COUNTRIES = FLAG_MATCH_CHALLENGE_V1_CATALOGUE.map((code) => {
   const country = COUNTRY_BY_CODE.get(code);
   if (!country) throw new Error(`Flag Match challenge v1 catalogue country is missing: ${code}`);
@@ -99,8 +100,9 @@ function decodeV1Pool(value: string): Country[] | null {
   if (!bytes || bytes.length !== V1_BYTE_LENGTH) return null;
   if (V1_UNUSED_BITS > 0 && (bytes[bytes.length - 1] & ((1 << V1_UNUSED_BITS) - 1)) !== 0) return null;
 
-  const countryPool = V1_COUNTRIES.filter((_, index) => (
-    (bytes[Math.floor(index / 8)] & (1 << (7 - (index % 8)))) !== 0
+  const countryPool = V1_COUNTRIES.filter((country, index) => (
+    PLAYABLE_COUNTRY_CODES.has(country.code)
+    && (bytes[Math.floor(index / 8)] & (1 << (7 - (index % 8)))) !== 0
   ));
 
   return countryPool.length >= MINIMUM_ACTIVE_COUNTRIES ? countryPool : null;
@@ -113,7 +115,7 @@ function decodeV1Pool(value: string): Country[] | null {
  */
 export function orderFlagMatchChallengePool(countryPool: readonly Country[]): Country[] {
   const activeCodes = new Set(countryPool.map((country) => country.code));
-  return V1_COUNTRIES.filter((country) => activeCodes.has(country.code));
+  return V1_COUNTRIES.filter((country) => PLAYABLE_COUNTRY_CODES.has(country.code) && activeCodes.has(country.code));
 }
 
 function readNonNegativeInteger(value: unknown): number | null {

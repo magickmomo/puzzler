@@ -1,4 +1,4 @@
-import { COUNTRIES, type Country } from "@/app/data/countries";
+import { SOVEREIGN_NATIONS, type Country } from "@/app/data/countries";
 import type { GameMode } from "./flag-quiz";
 
 export const FLAG_REPORT_GAME_MODES = ["classic", "unlimited", "speed-match", "flag-match-unlimited"] as const satisfies readonly GameMode[];
@@ -73,7 +73,7 @@ export function getHardestFlags(flagStatsByMode: FlagStatsByMode, filter: FlagRe
     }
   }
 
-  return COUNTRIES.flatMap((country) => {
+  return SOVEREIGN_NATIONS.flatMap((country) => {
     const stats = combinedStats[country.code];
     if (!stats || stats.wrong === 0 || stats.attempts === 0) return [];
 

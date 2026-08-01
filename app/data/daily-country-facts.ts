@@ -1,5 +1,5 @@
 import { CAPITAL_MATCH_PAIRS } from "./capitals";
-import { COUNTRIES, type Country } from "./countries";
+import { SOVEREIGN_NATIONS, type Country } from "./countries";
 
 export type DailyCountryFacts = {
   continent: string;
@@ -37,7 +37,7 @@ const decodedFacts = Object.fromEntries(FACT_ROWS.split(";").map((row) => {
   }];
 })) as Record<string, DailyCountryFacts>;
 
-for (const country of COUNTRIES) {
+for (const country of SOVEREIGN_NATIONS) {
   if (!decodedFacts[country.code] || !decodedFacts[country.code].capital) {
     throw new Error("Missing daily challenge facts for " + country.name + ".");
   }

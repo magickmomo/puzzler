@@ -9,7 +9,7 @@ import {
   getDailyCountryGuessFeedback,
   getDailyCountryPuzzle,
 } from "@/lib/daily-country";
-import { COUNTRIES, type Country } from "@/app/data/countries";
+import { SOVEREIGN_NATIONS, type Country } from "@/app/data/countries";
 import { trackFirstGameCompletion, trackGameAbandoned, trackGameCompleted, trackGameStarted, trackReplayStarted } from "@/lib/analytics";
 import { useCookieSettings } from "@/components/analytics/AnalyticsConsentProvider";
 import { CountryAutocomplete } from "@/components/gameplay/CountryAutocomplete";
@@ -279,7 +279,7 @@ export function DailyCountryChallenge({ onBack }: { onBack: () => void }) {
                   <CountryAutocomplete
                     id="daily-country-answer"
                     value={answer}
-                    countries={COUNTRIES}
+                    countries={SOVEREIGN_NATIONS}
                     onChange={(value) => {
                       setAnswer(value);
                       setSelectedCountry(null);

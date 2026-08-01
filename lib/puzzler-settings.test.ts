@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { COUNTRIES, UK_HOME_NATION_CODES } from "@/app/data/countries";
+import { SOVEREIGN_NATIONS, UK_HOME_NATION_CODES } from "@/app/data/countries";
 import {
   MINIMUM_ACTIVE_COUNTRIES,
   createDefaultSettings,
@@ -12,12 +12,12 @@ describe("country settings", () => {
   it("starts with sovereign nations enabled and filters excluded countries", () => {
     expect(createDefaultSettings()).toEqual({ excludedCountryCodes: [...UK_HOME_NATION_CODES] });
     expect(getActiveCountries(["br", "fr"]).map((country) => country.code)).not.toContain("br");
-    expect(getActiveCountries(["br", "fr"])).toHaveLength(COUNTRIES.length - 2);
+    expect(getActiveCountries(["br", "fr"])).toHaveLength(SOVEREIGN_NATIONS.length - 2);
   });
 
   it("keeps the minimum active country pool intact", () => {
-    const excludedCodes = COUNTRIES.slice(0, COUNTRIES.length - MINIMUM_ACTIVE_COUNTRIES).map((country) => country.code);
-    const lastActiveCountry = COUNTRIES.at(-1)!;
+    const excludedCodes = SOVEREIGN_NATIONS.slice(0, SOVEREIGN_NATIONS.length - MINIMUM_ACTIVE_COUNTRIES).map((country) => country.code);
+    const lastActiveCountry = SOVEREIGN_NATIONS.at(-1)!;
 
     expect(hasMinimumActiveCountries(excludedCodes)).toBe(true);
     expect(setCountryExcluded(excludedCodes, lastActiveCountry.code, true)).toEqual(excludedCodes);

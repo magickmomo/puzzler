@@ -55,5 +55,7 @@ export const UK_HOME_NATION_CODES = ["gb-eng", "gb-nir", "gb-sct", "gb-wls"] as 
 
 const UK_HOME_NATION_CODE_SET = new Set<string>(UK_HOME_NATION_CODES);
 
+// These home-nation records remain available for historic data and future
+// modes, but are intentionally archived from all current game pools.
+export const ARCHIVED_COUNTRIES = COUNTRIES.filter((country) => UK_HOME_NATION_CODE_SET.has(country.code));
 export const SOVEREIGN_NATIONS = COUNTRIES.filter((country) => !UK_HOME_NATION_CODE_SET.has(country.code));
-export const OTHER_FLAGS = COUNTRIES.filter((country) => UK_HOME_NATION_CODE_SET.has(country.code));

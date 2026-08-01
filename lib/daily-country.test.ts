@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { COUNTRIES } from "@/app/data/countries";
+import { SOVEREIGN_NATIONS } from "@/app/data/countries";
 import { getDailyCountryFacts } from "@/app/data/daily-country-facts";
 import {
   DAILY_COUNTRY_EPOCH,
@@ -24,13 +24,13 @@ describe("daily country puzzle", () => {
 
   it("uses the same country for every player and does not repeat within a full cycle", () => {
     const start = new Date(DAILY_COUNTRY_EPOCH + "T12:00:00.000Z");
-    const countries = Array.from({ length: COUNTRIES.length }, (_, index) => {
+    const countries = Array.from({ length: SOVEREIGN_NATIONS.length }, (_, index) => {
       const now = new Date(start.getTime() + index * 86_400_000);
       return getDailyCountryPuzzle(now).country.code;
     });
 
     expect(getDailyCountryPuzzle(start).country.code).toBe(getDailyCountryPuzzle(start).country.code);
-    expect(new Set(countries)).toHaveLength(COUNTRIES.length);
+    expect(new Set(countries)).toHaveLength(SOVEREIGN_NATIONS.length);
   });
 
   it("reveals the six clues in their fixed order with complete facts", () => {
@@ -43,7 +43,7 @@ describe("daily country puzzle", () => {
   });
 
   it("does not repeat a continent already named by the regional location clue", () => {
-    const madagascar = COUNTRIES.find((country) => country.code === "mg");
+    const madagascar = SOVEREIGN_NATIONS.find((country) => country.code === "mg");
     expect(madagascar).toBeDefined();
     if (!madagascar) return;
 
@@ -58,7 +58,7 @@ describe("daily country puzzle", () => {
   });
 
   it("has a complete local clue record for every playable country", () => {
-    for (const country of COUNTRIES) {
+    for (const country of SOVEREIGN_NATIONS) {
       const facts = getDailyCountryFacts(country);
       expect(facts.continent).toBeTruthy();
       expect(facts.region).toBeTruthy();
@@ -70,7 +70,7 @@ describe("daily country puzzle", () => {
   });
 
   it("gives every country offline distance and directional guess feedback", () => {
-    for (const country of COUNTRIES) {
+    for (const country of SOVEREIGN_NATIONS) {
       const feedback = getDailyCountryGuessFeedback(country.name, country);
       expect(feedback.country?.code).toBe(country.code);
       expect(feedback.distanceKm).toBe(0);
@@ -78,7 +78,7 @@ describe("daily country puzzle", () => {
       expect(feedback.proximity).toBe(100);
     }
 
-    const madagascar = COUNTRIES.find((country) => country.code === "mg");
+    const madagascar = SOVEREIGN_NATIONS.find((country) => country.code === "mg");
     expect(madagascar).toBeDefined();
     if (!madagascar) return;
 

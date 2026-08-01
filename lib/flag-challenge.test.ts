@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { COUNTRIES, type Country } from "@/app/data/countries";
+import { COUNTRIES, SOVEREIGN_NATIONS, type Country } from "@/app/data/countries";
 import { SPEED_MATCH_UNLIMITED_VISIBLE_FLAGS, createQuestionDeck, createSeededRandom, createSpeedMatchUnlimitedColumns, pickSpeedMatchTarget } from "./flag-quiz";
 import {
   FLAG_MATCH_CHALLENGE_V1_CATALOGUE,
@@ -42,7 +42,7 @@ describe("Flag Match challenges", () => {
       challengerDurationMs: 64_300,
       challengerMistakes: 3,
     });
-    expect(parsed?.countryPool.map((country) => country.code)).toEqual(V1_POOL.map((country) => country.code));
+    expect(parsed?.countryPool.map((country) => country.code)).toEqual(SOVEREIGN_NATIONS.map((country) => country.code).sort());
   });
 
   it("uses a fixed-size pool payload for both small and full pools", () => {

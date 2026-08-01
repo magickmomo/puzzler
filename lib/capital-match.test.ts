@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CAPITAL_MATCH_PAIRS } from "@/app/data/capitals";
-import { COUNTRIES } from "@/app/data/countries";
+import { SOVEREIGN_NATIONS } from "@/app/data/countries";
 import {
   CAPITAL_MATCH_PAIR_COUNT,
   WRONG_CAPITAL_MATCH_PENALTY_MS,
@@ -11,9 +11,8 @@ import {
 
 describe("capital matching", () => {
   it("provides a capital for every country available to Puzzler", () => {
-    expect(CAPITAL_MATCH_PAIRS).toHaveLength(COUNTRIES.length);
-    expect(CAPITAL_MATCH_PAIRS.find((pair) => pair.code === "gb-sct")?.capital).toBe("Edinburgh");
-    expect(CAPITAL_MATCH_PAIRS.find((pair) => pair.code === "gb-nir")?.capital).toBe("Belfast");
+    expect(CAPITAL_MATCH_PAIRS).toHaveLength(SOVEREIGN_NATIONS.length);
+    expect(CAPITAL_MATCH_PAIRS.some((pair) => pair.code.startsWith("gb-"))).toBe(false);
   });
 
   it("creates a ten-pair board with independently ordered country and capital cards", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { COUNTRIES } from "@/app/data/countries";
+import { COUNTRIES, SOVEREIGN_NATIONS } from "@/app/data/countries";
 import {
   FLAG_MATCH_TIMED_CORRECT_BONUS_MS,
   QUESTIONS_PER_GAME,
@@ -157,8 +157,8 @@ describe("quiz decks", () => {
   it("creates a unique full-country Unlimited deck", () => {
     const deck = createQuestionDeck("unlimited");
 
-    expect(deck).toHaveLength(COUNTRIES.length);
-    expect(new Set(deck.map((country) => country.code)).size).toBe(COUNTRIES.length);
+    expect(deck).toHaveLength(SOVEREIGN_NATIONS.length);
+    expect(new Set(deck.map((country) => country.code)).size).toBe(SOVEREIGN_NATIONS.length);
   });
 
   it("creates a unique ten-flag Speed Match board", () => {
@@ -183,7 +183,7 @@ describe("quiz decks", () => {
     const target = pickSpeedMatchTarget(visibleFlags);
     const columns = createSpeedMatchUnlimitedColumns(visibleFlags);
 
-    expect(deck).toHaveLength(COUNTRIES.length);
+    expect(deck).toHaveLength(SOVEREIGN_NATIONS.length);
     expect(visibleFlags).toHaveLength(SPEED_MATCH_UNLIMITED_VISIBLE_FLAGS);
     expect(columns).toHaveLength(3);
     expect(columns.every((column) => column.length === 3)).toBe(true);

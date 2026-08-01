@@ -1,4 +1,4 @@
-import { COUNTRIES, type Country } from "@/app/data/countries";
+import { SOVEREIGN_NATIONS, type Country } from "@/app/data/countries";
 import { getDailyCountryFacts, type DailyCountryFacts } from "@/app/data/daily-country-facts";
 import { normalizeAnswer } from "./flag-quiz";
 
@@ -107,7 +107,7 @@ function getRecognisedCountry(value: string): Country | null {
   const answer = normalizeAnswer(value);
   if (!answer) return null;
 
-  return COUNTRIES.find((country) => (
+  return SOVEREIGN_NATIONS.find((country) => (
     [country.name, ...country.aliases].some((name) => normalizeAnswer(name) === answer)
   )) ?? null;
 }
@@ -161,7 +161,7 @@ export function getDailyCountryPuzzleNumber(now = new Date()): number {
 
 export function getDailyCountryPuzzle(
   now = new Date(),
-  countries: readonly Country[] = COUNTRIES,
+  countries: readonly Country[] = SOVEREIGN_NATIONS,
 ): DailyCountryPuzzle {
   const dayIndex = getDailyCountryDayIndex(now);
   const cycleIndex = Math.floor(dayIndex / countries.length);

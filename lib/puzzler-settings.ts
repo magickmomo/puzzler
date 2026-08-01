@@ -1,4 +1,4 @@
-import { COUNTRIES, UK_HOME_NATION_CODES, type Country } from "@/app/data/countries";
+import { SOVEREIGN_NATIONS, UK_HOME_NATION_CODES, type Country } from "@/app/data/countries";
 
 export const MINIMUM_ACTIVE_COUNTRIES = 12;
 
@@ -6,7 +6,7 @@ export type PuzzlerSettings = {
   excludedCountryCodes: string[];
 };
 
-const COUNTRY_CODES = new Set(COUNTRIES.map((country) => country.code));
+const COUNTRY_CODES = new Set(SOVEREIGN_NATIONS.map((country) => country.code));
 
 export function createDefaultSettings(): PuzzlerSettings {
   return { excludedCountryCodes: [...UK_HOME_NATION_CODES] };
@@ -14,7 +14,7 @@ export function createDefaultSettings(): PuzzlerSettings {
 
 export function getActiveCountries(excludedCountryCodes: readonly string[]): Country[] {
   const excludedCodes = new Set(excludedCountryCodes);
-  return COUNTRIES.filter((country) => !excludedCodes.has(country.code));
+  return SOVEREIGN_NATIONS.filter((country) => !excludedCodes.has(country.code));
 }
 
 export function hasMinimumActiveCountries(excludedCountryCodes: readonly string[]): boolean {
