@@ -1,16 +1,15 @@
 import type { FormEvent } from "react";
-import { useMemo } from "react";
 import type { Country } from "@/app/data/countries";
 import {
-  createMultipleChoiceOptions,
   getCountryHint,
   getNextRoundAction,
   type Difficulty,
   type GameMode,
 } from "@/lib/flag-quiz";
-import { AnswerFeedback } from "./AnswerFeedback";
+import { AnswerChoiceGrid } from "@/components/gameplay/AnswerChoiceGrid";
+import { AnswerFeedback } from "@/components/gameplay/AnswerFeedback";
+import type { AnswerOutcome } from "@/components/gameplay/answer-outcome";
 import { FlagImage } from "./FlagImage";
-import { MultipleChoice } from "./MultipleChoice";
 import { ProgressBar } from "./ProgressBar";
 import { TextAnswer } from "./TextAnswer";
 
@@ -18,7 +17,7 @@ export function QuizRound({
   gameMode,
   difficulty,
   questions,
-  countryPool,
+  multipleChoiceOptions,
   index,
   questionNumber,
   answer,
@@ -33,7 +32,7 @@ export function QuizRound({
   gameMode: GameMode;
   difficulty: Difficulty;
   questions: Country[];
-  countryPool: Country[];
+  multipleChoiceOptions: Country[];
   index: number;
   questionNumber: number;
   answer: string;
@@ -46,13 +45,14 @@ export function QuizRound({
   onNext: () => void;
 }) {
   const question = questions[index];
-  const options = useMemo(() => createMultipleChoiceOptions(question, countryPool), [countryPool, question]);
   const action = getNextRoundAction({
     gameMode,
     correct: wasCorrect ?? false,
     deckIndex: index,
     deckSize: questions.length,
   });
+  const outcome: AnswerOutcome = wasCorrect === null ? "unanswered" : wasCorrect ? "correct" : "incorrect";
+  const selectedChoiceId = multipleChoiceOptions.find((country) => country.name === answer)?.code ?? null;
 
   function submitText(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -72,22 +72,25 @@ export function QuizRound({
       {answered && wasCorrect !== null && (
         <div className="mb-4">
           <AnswerFeedback
-            correct={wasCorrect}
+            outcome={wasCorrect ? "correct" : "incorrect"}
             answer={question.name}
             actionLabel={action === "results" ? "See results" : "Next flag"}
-            onNext={onNext}
+            onContinue={onNext}
           />
         </div>
       )}
       <div className="pb-[max(0.25rem,env(safe-area-inset-bottom))]">
         {difficulty === "easy" ? (
-          <MultipleChoice
-            options={options}
-            answer={answer}
-            correctAnswer={question.name}
-            disabled={answered}
-            wasCorrect={wasCorrect}
-            onAnswer={onSubmit}
+          <AnswerChoiceGrid
+            choices={multipleChoiceOptions.map((country) => ({ id: country.code, label: country.name }))}
+            selectedId={selectedChoiceId}
+            correctId={question.code}
+            outcome={outcome}
+            tone="cyan"
+            onAnswer={(countryCode) => {
+              const selectedCountry = multipleChoiceOptions.find((country) => country.code === countryCode);
+              if (selectedCountry) onSubmit(selectedCountry.name);
+            }}
           />
         ) : (
           <TextAnswer

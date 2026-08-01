@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { COUNTRIES } from "@/app/data/countries";
+import { COUNTRIES, UK_HOME_NATION_CODES } from "@/app/data/countries";
 import {
   MINIMUM_ACTIVE_COUNTRIES,
   createDefaultSettings,
@@ -9,8 +9,8 @@ import {
 } from "./puzzler-settings";
 
 describe("country settings", () => {
-  it("starts with all countries enabled and filters excluded countries", () => {
-    expect(createDefaultSettings()).toEqual({ excludedCountryCodes: [] });
+  it("starts with sovereign nations enabled and filters excluded countries", () => {
+    expect(createDefaultSettings()).toEqual({ excludedCountryCodes: [...UK_HOME_NATION_CODES] });
     expect(getActiveCountries(["br", "fr"]).map((country) => country.code)).not.toContain("br");
     expect(getActiveCountries(["br", "fr"])).toHaveLength(COUNTRIES.length - 2);
   });

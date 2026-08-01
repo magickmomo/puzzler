@@ -6,6 +6,8 @@ import {
   SPEED_MATCH_UNLIMITED_VISIBLE_FLAGS,
   createMultipleChoiceOptions,
   createQuestionDeck,
+  createRunSeed,
+  createSeededRandom,
   createSpeedMatchTargetDeck,
   createSpeedMatchUnlimitedColumns,
   extendDeadline,
@@ -85,6 +87,55 @@ describe("answer normalization", () => {
 });
 
 describe("quiz decks", () => {
+  it("creates 64-bit run seeds", () => {
+    expect(createRunSeed()).toMatch(/^[0-9a-f]{16}$/);
+  });
+
+  it("recreates every seeded Flag Blitz shuffle", () => {
+    const firstRandom = createSeededRandom("8f92a1bc1a2b3c4d");
+    const secondRandom = createSeededRandom("8f92a1bc1a2b3c4d");
+    const firstDeck = createQuestionDeck("flag-match-unlimited", COUNTRIES, firstRandom);
+    const secondDeck = createQuestionDeck("flag-match-unlimited", COUNTRIES, secondRandom);
+
+    expect(firstDeck.map((country) => country.code)).toEqual(secondDeck.map((country) => country.code));
+    expect(createSpeedMatchTargetDeck(firstDeck.slice(0, 10), firstRandom).map((country) => country.code))
+      .toEqual(createSpeedMatchTargetDeck(secondDeck.slice(0, 10), secondRandom).map((country) => country.code));
+  });
+
+  it("recreates a seeded Flag Match board, queue, and target", () => {
+    function createFlagMatchStart(seed: string) {
+      const random = createSeededRandom(seed);
+      const deck = createQuestionDeck("flag-match-unlimited", COUNTRIES, random);
+      const visibleFlags = deck.slice(0, SPEED_MATCH_UNLIMITED_VISIBLE_FLAGS);
+
+      return {
+        deck: deck.map((country) => country.code),
+        columns: createSpeedMatchUnlimitedColumns(visibleFlags).map((column) => column.map((country) => country.code)),
+        queued: deck.slice(SPEED_MATCH_UNLIMITED_VISIBLE_FLAGS, SPEED_MATCH_UNLIMITED_VISIBLE_FLAGS + 3).map((country) => country.code),
+        target: pickSpeedMatchTarget(visibleFlags, random)?.code,
+      };
+    }
+
+    expect(createFlagMatchStart("8f92a1bc1a2b3c4d")).toEqual(createFlagMatchStart("8f92a1bc1a2b3c4d"));
+  });
+
+  it("uses a seed for repeatable Easy options and Unlimited reshuffles", () => {
+    const firstRandom = createSeededRandom("0000000000000001");
+    const secondRandom = createSeededRandom("0000000000000001");
+    const firstDeck = createQuestionDeck("unlimited", COUNTRIES, firstRandom);
+    const secondDeck = createQuestionDeck("unlimited", COUNTRIES, secondRandom);
+
+    expect(createMultipleChoiceOptions(firstDeck[0], COUNTRIES, firstRandom).map((country) => country.code))
+      .toEqual(createMultipleChoiceOptions(secondDeck[0], COUNTRIES, secondRandom).map((country) => country.code));
+    expect(createQuestionDeck("unlimited", COUNTRIES, firstRandom).map((country) => country.code))
+      .toEqual(createQuestionDeck("unlimited", COUNTRIES, secondRandom).map((country) => country.code));
+  });
+
+  it("creates different shuffle sequences for different seeds", () => {
+    expect(createQuestionDeck("flag-match-unlimited", COUNTRIES, createSeededRandom("0000000000000001")).map((country) => country.code))
+      .not.toEqual(createQuestionDeck("flag-match-unlimited", COUNTRIES, createSeededRandom("0000000000000002")).map((country) => country.code));
+  });
+
   it("creates a unique ten-flag Classic deck", () => {
     const deck = createQuestionDeck("classic");
 

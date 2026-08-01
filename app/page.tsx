@@ -1,29 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Changelog } from "@/components/Changelog";
 import { DailyCountryCard } from "@/components/daily-country/DailyCountryCard";
 import { trackGameSelected } from "@/lib/analytics";
-import { usePuzzlerStore } from "@/lib/puzzler-store";
 
 type GameCardConfig = {
-  id: "flag-blitz" | "capital-cities" | "number-drop";
+  id: "flag-blitz" | "capital-cities" | "country-silhouettes";
   title: string;
   eyebrow: string;
   description: string;
   accent: string;
   icon: ReactNode;
   available: boolean;
-  href?: "/flag-blitz" | "/capital-cities";
+  href?: "/flag-blitz" | "/capital-cities" | "/country-silhouettes";
 };
 
 type DailyChallengeCardConfig = {
   id: "daily-country";
   Component: () => ReactNode;
 };
-
-const SHOW_DEV_GAMES = process.env.NEXT_PUBLIC_PUZZLER_MODE === "dev";
 
 function EiffelTowerIcon() {
   return (
@@ -61,13 +58,14 @@ const GAME_CARDS: readonly GameCardConfig[] = [
     href: "/capital-cities",
   },
   {
-    id: "number-drop",
-    title: "Number Drop",
-    eyebrow: "Coming soon",
-    description: "Stack numbers and chase the perfect combo.",
+    id: "country-silhouettes",
+    title: "Country Silhouettes",
+    eyebrow: "New game",
+    description: "Read the outline. Name the nation. Sharpen your geography.",
     accent: "from-amber-300 to-orange-500",
-    icon: "42",
-    available: false,
+    icon: "◒",
+    available: true,
+    href: "/country-silhouettes",
   },
 ];
 
@@ -136,7 +134,7 @@ function GameCard({ game }: { game: GameCardConfig }) {
   return (
     <Link
       href={game.href!}
-      onClick={() => void trackGameSelected(game.id === "flag-blitz" ? "flag_blitz" : "capital_cities")}
+      onClick={() => void trackGameSelected(game.id === "flag-blitz" ? "flag_blitz" : game.id === "capital-cities" ? "capital_cities" : "country_silhouettes")}
       className={`${commonClasses} block w-full border-slate-700/80 bg-slate-900/80 hover:-translate-y-1 hover:border-cyan-300/40 hover:bg-slate-900`}
     >
       {content}
@@ -145,8 +143,6 @@ function GameCard({ game }: { game: GameCardConfig }) {
 }
 
 function Hub({ onOpenChangelog }: { onOpenChangelog: () => void }) {
-  const visibleGames = SHOW_DEV_GAMES ? GAME_CARDS : GAME_CARDS.filter((game) => game.available);
-
   return (
     <main className="mx-auto min-h-[100dvh] w-full max-w-5xl px-5 pb-10 pt-[max(1.25rem,env(safe-area-inset-top))] sm:px-8">
       <HubHeader onOpenChangelog={onOpenChangelog} />
@@ -168,10 +164,10 @@ function Hub({ onOpenChangelog }: { onOpenChangelog: () => void }) {
             <p className="text-sm font-semibold text-slate-500">Play whenever you like.</p>
             <h2 id="games-heading" className="mt-1 text-3xl font-black tracking-tight text-white">Practice arcade</h2>
           </div>
-          <span className="hidden rounded-full border border-slate-800 px-3 py-2 text-xs font-bold text-slate-500 sm:block">{SHOW_DEV_GAMES ? "Dev catalog" : "2 games live"}</span>
+          <span className="hidden rounded-full border border-slate-800 px-3 py-2 text-xs font-bold text-slate-500 sm:block">3 games live</span>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {visibleGames.map((game) => <GameCard key={game.id} game={game} />)}
+          {GAME_CARDS.map((game) => <GameCard key={game.id} game={game} />)}
         </div>
       </section>
       <p className="mt-10 border-t border-slate-900 pt-5 text-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-700">New games loading</p>
@@ -180,16 +176,14 @@ function Hub({ onOpenChangelog }: { onOpenChangelog: () => void }) {
 }
 
 export default function PuzzlerApp() {
-  const route = usePuzzlerStore((state) => state.route);
-  const goHome = usePuzzlerStore((state) => state.goHome);
-  const openChangelog = usePuzzlerStore((state) => state.openChangelog);
+  const [view, setView] = useState<"hub" | "changelog">("hub");
 
   return (
     <div className="min-h-[100dvh] bg-slate-950 text-slate-50 antialiased">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top,rgba(8,145,178,0.12),transparent_34rem)]" />
       <div className="relative">
-        {route.screen === "hub" && <Hub onOpenChangelog={openChangelog} />}
-        {route.screen === "changelog" && <Changelog onBack={goHome} />}
+        {view === "hub" && <Hub onOpenChangelog={() => setView("changelog")} />}
+        {view === "changelog" && <Changelog onBack={() => setView("hub")} />}
       </div>
     </div>
   );

@@ -11,16 +11,19 @@ import {
 } from "@/lib/daily-country";
 import { isCorrectAnswer } from "@/lib/flag-quiz";
 import { trackFirstGameCompletion, trackGameAbandoned, trackGameCompleted, trackGameStarted } from "@/lib/analytics";
+import { useCookieSettings } from "@/components/analytics/AnalyticsConsentProvider";
 import { usePuzzlerStore } from "@/lib/puzzler-store";
 
 export function DailyCountryChallenge({ onBack }: { onBack: () => void }) {
   const outcomes = usePuzzlerStore((state) => state.dailyCountry.outcomes);
   const recordOutcome = usePuzzlerStore((state) => state.recordDailyCountryOutcome);
+  const { analyticsConsentGranted, analyticsReady } = useCookieSettings();
   const [now, setNow] = useState(() => new Date());
   const [answer, setAnswer] = useState("");
   const [feedback, setFeedback] = useState<string | null>(null);
   const startedAtRef = useRef(Date.now());
   const activeDateRef = useRef<string | null>(null);
+  const gameStartedTrackedRef = useRef(false);
 
   const puzzle = getDailyCountryPuzzle(now);
   const clues = getDailyCountryClues(puzzle);
@@ -39,20 +42,40 @@ export function DailyCountryChallenge({ onBack }: { onBack: () => void }) {
     setFeedback(null);
     startedAtRef.current = Date.now();
     activeDateRef.current = null;
+    gameStartedTrackedRef.current = false;
 
     if (outcome?.status === "solved" || outcome?.status === "failed") return;
 
     activeDateRef.current = puzzle.dateKey;
-    void trackGameStarted({ game: "daily_country" });
   }, [puzzle.dateKey]);
+
+  function trackStartIfNeeded() {
+    if (activeDateRef.current !== puzzle.dateKey || !analyticsReady || !analyticsConsentGranted || gameStartedTrackedRef.current) return;
+
+    gameStartedTrackedRef.current = true;
+    void trackGameStarted({ game: "daily_country", game_run_number: puzzle.puzzleNumber });
+  }
+
+  useEffect(() => {
+    trackStartIfNeeded();
+  }, [analyticsConsentGranted, analyticsReady, puzzle.dateKey]);
 
   function abandonChallenge() {
     if (activeDateRef.current === puzzle.dateKey && !isComplete) {
-      void trackGameAbandoned({
-        game: "daily_country",
-        duration_ms: Math.max(0, Date.now() - startedAtRef.current),
-        progress: guessesUsed,
-      });
+      void (async () => {
+        if (!gameStartedTrackedRef.current && analyticsReady && analyticsConsentGranted) {
+          gameStartedTrackedRef.current = true;
+          await trackGameStarted({ game: "daily_country", game_run_number: puzzle.puzzleNumber });
+        }
+        await trackGameAbandoned({
+          game: "daily_country",
+          duration_ms: Math.max(0, Date.now() - startedAtRef.current),
+          attempts: guessesUsed,
+          mistakes: guessesUsed,
+          game_run_number: puzzle.puzzleNumber,
+          exit_reason: "hub",
+        });
+      })();
     }
 
     activeDateRef.current = null;
@@ -70,24 +93,42 @@ export function DailyCountryChallenge({ onBack }: { onBack: () => void }) {
       recordOutcome(puzzle.dateKey, "solved", nextGuessesUsed);
       setFeedback("Correct!");
       activeDateRef.current = null;
-      void trackGameCompleted({
-        game: "daily_country",
-        score: DAILY_COUNTRY_GUESS_LIMIT + 1 - nextGuessesUsed,
-        duration_ms: Math.max(0, Date.now() - startedAtRef.current),
-        progress: nextGuessesUsed,
-      });
-      void trackFirstGameCompletion("daily_country");
+      void (async () => {
+        if (!gameStartedTrackedRef.current && analyticsReady && analyticsConsentGranted) {
+          gameStartedTrackedRef.current = true;
+          await trackGameStarted({ game: "daily_country", game_run_number: puzzle.puzzleNumber });
+        }
+        await trackGameCompleted({
+          game: "daily_country",
+          score: DAILY_COUNTRY_GUESS_LIMIT + 1 - nextGuessesUsed,
+          duration_ms: Math.max(0, Date.now() - startedAtRef.current),
+          attempts: nextGuessesUsed,
+          mistakes: nextGuessesUsed - 1,
+          game_run_number: puzzle.puzzleNumber,
+          end_reason: "cleared",
+        });
+        await trackFirstGameCompletion("daily_country");
+      })();
     } else if (nextGuessesUsed === DAILY_COUNTRY_GUESS_LIMIT) {
       recordOutcome(puzzle.dateKey, "failed", nextGuessesUsed);
       setFeedback("No guesses left.");
       activeDateRef.current = null;
-      void trackGameCompleted({
-        game: "daily_country",
-        score: 0,
-        duration_ms: Math.max(0, Date.now() - startedAtRef.current),
-        progress: nextGuessesUsed,
-      });
-      void trackFirstGameCompletion("daily_country");
+      void (async () => {
+        if (!gameStartedTrackedRef.current && analyticsReady && analyticsConsentGranted) {
+          gameStartedTrackedRef.current = true;
+          await trackGameStarted({ game: "daily_country", game_run_number: puzzle.puzzleNumber });
+        }
+        await trackGameCompleted({
+          game: "daily_country",
+          score: 0,
+          duration_ms: Math.max(0, Date.now() - startedAtRef.current),
+          attempts: nextGuessesUsed,
+          mistakes: nextGuessesUsed,
+          game_run_number: puzzle.puzzleNumber,
+          end_reason: "wrong_answer",
+        });
+        await trackFirstGameCompletion("daily_country");
+      })();
     } else {
       recordOutcome(puzzle.dateKey, "in-progress", nextGuessesUsed);
       setFeedback("Not quite — another clue is unlocked.");

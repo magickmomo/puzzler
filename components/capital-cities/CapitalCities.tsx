@@ -19,8 +19,10 @@ import {
   trackReplayStarted,
 } from "@/lib/analytics";
 import { useCookieSettings } from "@/components/analytics/AnalyticsConsentProvider";
+import { GameTimer } from "@/components/GameTimer";
+import { ShareResultButton } from "@/components/gameplay/ShareResultButton";
 
-type RoundState = "waiting" | "playing" | "complete";
+type RoundState = "waiting" | "playing" | "paused" | "complete";
 type ResolvingPair = {
   countryCode: string;
   capitalCode: string;
@@ -33,7 +35,8 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
   const recordPlay = usePuzzlerStore((state) => state.recordCapitalCitiesPlay);
   const recordResult = usePuzzlerStore((state) => state.recordCapitalCitiesResult);
   const bestTimeMs = usePuzzlerStore((state) => state.capitalCities.bestTimeMs);
-  const { analyticsConsentGranted, analyticsReady, consentResolved } = useCookieSettings();
+  const totalPlays = usePuzzlerStore((state) => state.capitalCities.totalPlays);
+  const { analyticsConsentGranted, analyticsReady } = useCookieSettings();
   const [board, setBoard] = useState(() => createCapitalMatchBoard());
   const [roundState, setRoundState] = useState<RoundState>("waiting");
   const [selectedCountryCode, setSelectedCountryCode] = useState<string | null>(null);
@@ -43,12 +46,21 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
   const [mistakes, setMistakes] = useState(0);
   const [elapsedMs, setElapsedMs] = useState(0);
   const startedAtRef = useRef<number | null>(null);
+  const pausedAtRef = useRef<number | null>(null);
   const resolutionTimerRef = useRef<number | null>(null);
-  const initialRunStartedRef = useRef(false);
-  const initialGameStartedTrackedRef = useRef(false);
+  const gameStartedTrackedRef = useRef(false);
   const activeRunRef = useRef(false);
   const mistakesRef = useRef(0);
+  const attemptsRef = useRef(0);
+  const gameRunNumberRef = useRef(0);
   const matchedCodesRef = useRef<string[]>([]);
+
+  function trackRunStartIfNeeded() {
+    if (!activeRunRef.current || !analyticsReady || !analyticsConsentGranted || gameStartedTrackedRef.current) return;
+
+    gameStartedTrackedRef.current = true;
+    void trackGameStarted({ game: "capital_cities", game_run_number: gameRunNumberRef.current });
+  }
 
   function clearResolutionTimer() {
     if (resolutionTimerRef.current !== null) {
@@ -57,21 +69,15 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
     }
   }
 
+  function getWallClockDurationMs(): number {
+    return startedAtRef.current === null ? 0 : Math.max(0, (pausedAtRef.current ?? Date.now()) - startedAtRef.current);
+  }
+
   useEffect(() => () => clearResolutionTimer(), []);
 
   useEffect(() => {
-    if (!consentResolved || initialRunStartedRef.current) return;
-
-    initialRunStartedRef.current = true;
-    startRun();
-  }, [consentResolved]);
-
-  useEffect(() => {
-    if (!activeRunRef.current || !analyticsReady || !analyticsConsentGranted || initialGameStartedTrackedRef.current) return;
-
-    initialGameStartedTrackedRef.current = true;
-    void trackGameStarted({ game: "capital_cities" });
-  }, [analyticsConsentGranted, analyticsReady]);
+    trackRunStartIfNeeded();
+  }, [analyticsConsentGranted, analyticsReady, roundState]);
 
   useEffect(() => {
     if (roundState !== "playing" || startedAtRef.current === null) return;
@@ -88,8 +94,12 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
   function startRun(isReplay = false) {
     clearResolutionTimer();
     startedAtRef.current = Date.now();
+    pausedAtRef.current = null;
     activeRunRef.current = true;
+    gameStartedTrackedRef.current = false;
     mistakesRef.current = 0;
+    attemptsRef.current = 0;
+    gameRunNumberRef.current = totalPlays + 1;
     matchedCodesRef.current = [];
     setBoard(createCapitalMatchBoard());
     setRoundState("playing");
@@ -102,7 +112,6 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
     recordPlay();
     if (isReplay) {
       void trackReplayStarted({ game: "capital_cities" });
-      void trackGameStarted({ game: "capital_cities" });
     }
   }
 
@@ -111,9 +120,11 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
       activeRunRef.current = false;
       void trackGameAbandoned({
         game: "capital_cities",
-        duration_ms: startedAtRef.current === null ? 0 : getCapitalMatchElapsedMs(startedAtRef.current, mistakesRef.current),
+        duration_ms: getWallClockDurationMs(),
+        attempts: attemptsRef.current,
         mistakes: mistakesRef.current,
-        progress: matchedCodesRef.current.length,
+        game_run_number: gameRunNumberRef.current,
+        exit_reason: "hub",
       });
     }
 
@@ -121,8 +132,40 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
     onBack();
   }
 
+  function pauseRun() {
+    if (roundState !== "playing" || resolvingPair || startedAtRef.current === null) return;
+
+    pausedAtRef.current = Date.now();
+    setElapsedMs(getCapitalMatchElapsedMs(startedAtRef.current, mistakesRef.current, pausedAtRef.current));
+    setRoundState("paused");
+  }
+
+  function resumeRun() {
+    if (roundState !== "paused" || pausedAtRef.current === null || startedAtRef.current === null) return;
+
+    startedAtRef.current += Date.now() - pausedAtRef.current;
+    pausedAtRef.current = null;
+    setRoundState("playing");
+  }
+
+  function restartRun() {
+    if (activeRunRef.current) {
+      activeRunRef.current = false;
+      void trackGameAbandoned({
+        game: "capital_cities",
+        duration_ms: getWallClockDurationMs(),
+        attempts: attemptsRef.current,
+        mistakes: mistakesRef.current,
+        game_run_number: gameRunNumberRef.current,
+        exit_reason: "restart",
+      });
+    }
+    startRun(true);
+  }
+
   function resolvePair(countryCode: string, capitalCode: string) {
     const correct = isCapitalMatch(countryCode, capitalCode);
+    attemptsRef.current += 1;
     setResolvingPair({ countryCode, capitalCode, correct });
 
     if (!correct) {
@@ -143,14 +186,24 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
           recordResult(finalElapsedMs);
           if (activeRunRef.current) {
             activeRunRef.current = false;
-            void trackGameCompleted({
-              game: "capital_cities",
-              score: board.pairs.length,
-              duration_ms: finalElapsedMs,
-              mistakes: mistakesRef.current,
-              progress: board.pairs.length,
-            });
-            void trackFirstGameCompletion("capital_cities");
+            void (async () => {
+              // A very fast first run can finish before the consent-ready effect has fired.
+              // Emit the start immediately before completion in that edge case.
+              if (!gameStartedTrackedRef.current && analyticsReady && analyticsConsentGranted) {
+                gameStartedTrackedRef.current = true;
+                await trackGameStarted({ game: "capital_cities", game_run_number: gameRunNumberRef.current });
+              }
+              await trackGameCompleted({
+                game: "capital_cities",
+                score: board.pairs.length,
+                duration_ms: getWallClockDurationMs(),
+                attempts: attemptsRef.current,
+                mistakes: mistakesRef.current,
+                game_run_number: gameRunNumberRef.current,
+                end_reason: "cleared",
+              });
+              if (attemptsRef.current > 0) await trackFirstGameCompletion("capital_cities");
+            })();
           }
         }
       }
@@ -202,14 +255,33 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
   const activeCapitals = board.capitals.filter((pair) => !matchedCodes.includes(pair.code));
   const pairsRemaining = board.pairs.length - matchedCodes.length;
 
+  if (roundState === "waiting") {
+    return (
+      <main className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col px-5 pb-10 pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-8">
+        <header className="relative flex min-h-14 items-center justify-between gap-3">
+          <button type="button" onClick={onBack} className="relative z-10 flex min-h-12 items-center gap-2 rounded-xl px-2 text-sm font-bold text-slate-400 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"><span aria-hidden="true">←</span> Back to Hub</button>
+          <p className="pointer-events-none absolute left-1/2 top-1/2 max-w-[55%] -translate-x-1/2 -translate-y-1/2 truncate text-center text-base font-black tracking-tight text-white">Match Capital Cities</p>
+          <span className="min-w-12" aria-hidden="true" />
+        </header>
+        <section className="flex flex-1 flex-col justify-center py-10 text-center" aria-labelledby="capital-ready-title">
+          <div className="mx-auto grid h-24 w-24 place-items-center rounded-3xl border border-violet-300/30 bg-violet-400/10 text-4xl shadow-glow" aria-hidden="true">🏛</div>
+          <p className="mt-7 text-xs font-black uppercase tracking-[0.25em] text-violet-300">Capital Cities</p>
+          <h1 id="capital-ready-title" className="mt-2 text-4xl font-black tracking-tight text-white">Match the pairs</h1>
+          <p className="mx-auto mt-3 max-w-sm text-base leading-7 text-slate-400">Match ten countries with their capitals. Correct pairs clear the board; each miss adds 2 seconds. Your time starts when you&apos;re ready.</p>
+          <button type="button" autoFocus onClick={() => startRun()} className="mx-auto mt-8 min-h-14 w-full max-w-sm rounded-2xl bg-violet-300 px-5 font-black text-slate-950 transition hover:bg-violet-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-100 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">Ready — start timer</button>
+        </section>
+      </main>
+    );
+  }
+
   if (roundState === "complete") {
     return (
       <main className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col px-5 pb-10 pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-8">
-        <header className="flex min-h-14 items-center justify-between gap-3">
-          <button type="button" onClick={abandonRun} className="flex min-h-12 items-center gap-2 rounded-xl px-2 text-sm font-bold text-slate-400 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300">
+        <header className="relative flex min-h-14 items-center justify-between gap-3">
+          <button type="button" onClick={abandonRun} className="relative z-10 flex min-h-12 items-center gap-2 rounded-xl px-2 text-sm font-bold text-slate-400 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300">
             <span aria-hidden="true">←</span> Back to Hub
           </button>
-          <p className="text-base font-black tracking-tight text-white">Match Capital Cities</p>
+          <p className="pointer-events-none absolute left-1/2 top-1/2 max-w-[55%] -translate-x-1/2 -translate-y-1/2 truncate text-center text-base font-black tracking-tight text-white">Match Capital Cities</p>
           <span className="min-w-12" aria-hidden="true" />
         </header>
 
@@ -233,8 +305,9 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
           <p className="mt-2 text-xs font-semibold text-slate-600">Each incorrect pair adds 2 seconds.</p>
 
           <div className="mx-auto mt-8 w-full max-w-sm space-y-3">
-            <button type="button" onClick={() => startRun(true)} className="min-h-14 w-full rounded-2xl bg-violet-300 px-5 font-black text-slate-950 transition hover:bg-violet-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-100 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950">Play again</button>
-            <button type="button" onClick={abandonRun} className="min-h-14 w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 font-black text-white transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400">Back to Hub</button>
+            <ShareResultButton message={`I matched ${CAPITAL_MATCH_PAIR_COUNT} capitals in ${(elapsedMs / 1_000).toFixed(1)} seconds on Puzzler.`} path="/capital-cities" tone="violet" />
+            <button type="button" onClick={() => startRun(true)} className="min-h-14 w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 font-black text-white transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400">Play again</button>
+            <button type="button" onClick={abandonRun} className="min-h-14 w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 font-black text-white transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400">Try another game</button>
           </div>
         </section>
       </main>
@@ -243,12 +316,15 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
 
   return (
     <main className="mx-auto flex min-h-[100dvh] w-full max-w-xl flex-col px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-8">
-      <header className="flex min-h-14 items-center justify-between gap-3">
-        <button type="button" onClick={abandonRun} className="flex min-h-12 items-center gap-2 rounded-xl px-2 text-sm font-bold text-slate-400 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300">
+      <header className="relative flex min-h-14 items-center justify-between gap-3">
+        <button type="button" onClick={abandonRun} className="relative z-10 flex min-h-12 items-center gap-2 rounded-xl px-2 text-sm font-bold text-slate-400 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300">
           <span aria-hidden="true">←</span> Back to Hub
         </button>
-        <p className="text-center text-base font-black tracking-tight text-white">Match Capital Cities</p>
-        <time className="min-w-20 text-right text-xl font-black tabular-nums text-violet-300" dateTime={`PT${Math.round(elapsedMs / 1_000)}S`} aria-label={`${formatSeconds(elapsedMs)} elapsed`}>{formatSeconds(elapsedMs)}</time>
+        <p className="pointer-events-none absolute left-1/2 top-1/2 max-w-[55%] -translate-x-1/2 -translate-y-1/2 truncate text-center text-base font-black tracking-tight text-white">Match Capital Cities</p>
+        <div className="relative z-10 flex items-center gap-2">
+          <button type="button" disabled={resolvingPair !== null} onClick={pauseRun} className="min-h-10 rounded-xl border border-violet-300/40 bg-violet-300/10 px-3 text-xs font-black text-violet-200 transition hover:bg-violet-300/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 disabled:cursor-not-allowed disabled:opacity-50">Pause</button>
+          <GameTimer durationMs={elapsedMs} mode="elapsed" tone="violet" />
+        </div>
       </header>
 
       <section className="flex-none py-7" aria-labelledby="capital-match-title">
@@ -308,6 +384,21 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
           </div>
         </div>
       </section>
+      {roundState === "paused" && (
+        <div className="fixed inset-0 z-50 flex min-h-[100dvh] items-center justify-center bg-slate-950 px-5 py-[max(1.25rem,env(safe-area-inset-top))] text-center" role="dialog" aria-modal="true" aria-labelledby="capital-pause-title">
+          <section className="w-full max-w-sm rounded-3xl border border-slate-800 bg-slate-900 p-6 shadow-2xl">
+            <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl border border-violet-300/30 bg-violet-300/10 text-3xl text-violet-300" aria-hidden="true">Ⅱ</div>
+            <p className="mt-6 text-xs font-black uppercase tracking-[0.25em] text-violet-300">Game paused</p>
+            <h1 id="capital-pause-title" className="mt-2 text-3xl font-black tracking-tight text-white">Take a breather</h1>
+            <p className="mt-3 text-sm leading-6 text-slate-400">Your timer and board are waiting exactly where you left them.</p>
+            <div className="mt-8 space-y-3">
+              <button type="button" autoFocus onClick={resumeRun} className="min-h-14 w-full rounded-2xl bg-violet-300 px-5 font-black text-slate-950 transition hover:bg-violet-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-100 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-900">Resume</button>
+              <button type="button" onClick={restartRun} className="min-h-14 w-full rounded-2xl border border-slate-700 bg-slate-800 px-5 font-black text-white transition hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300">Restart run</button>
+              <button type="button" onClick={abandonRun} className="min-h-14 w-full rounded-2xl px-5 font-black text-slate-400 transition hover:bg-slate-800 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300">Try another game</button>
+            </div>
+          </section>
+        </div>
+      )}
     </main>
   );
 }

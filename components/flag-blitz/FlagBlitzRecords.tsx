@@ -14,7 +14,7 @@ export function FlagBlitzRecords() {
         <Record value={records.bestClassicScore} label="Best 10" tone="text-cyan-300" description="Classic: your highest score in a ten-flag run." />
         <Record value={records.bestUnlimitedStreak} label="Best streak" tone="text-amber-300" description="Classic Unlimited: correct flags found before your first miss." />
         <Record value={formatSeconds(records.bestSpeedMatchTimeMs)} label="Best time" tone="text-rose-300" description="Speed Match: your fastest time to clear all ten flags on the 60-second board." />
-        <Record value={records.bestSpeedMatchUnlimitedScore} label="Best live" tone="text-violet-300" description="Flag Match Unlimited: flags found on the untimed replenishing board. Choose Save & see results to record a run." />
+        <Record value={records.bestSpeedMatchUnlimitedScore} label="Best marathon" tone="text-violet-300" description="Timed Flag Marathon: your highest score in a 60-second run. Untimed Marathon is practice and is not ranked." />
       </div>
     </section>
   );
