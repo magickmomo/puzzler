@@ -178,7 +178,7 @@ function ConsentDialog({
             <button type="button" disabled={isAcceptingAll} onClick={onClose} className="grid h-12 w-12 shrink-0 place-items-center rounded-xl text-xl text-slate-400 transition hover:bg-slate-900 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:cursor-default disabled:opacity-50" aria-label="Close cookie settings">×</button>
           )}
         </div>
-        <p id="cookie-settings-description" className="mt-3 text-sm leading-6 text-slate-300">Necessary storage keeps this choice and your local game records. Cookieless Vercel Web Analytics runs to measure basic traffic and site stability. Optional PostHog analytics and Meta marketing use browser identifiers only if you choose them. You can change your mind at any time.</p>
+        <p id="cookie-settings-description" className="mt-3 text-sm leading-6 text-slate-300">Necessary storage keeps this choice and your local game records. Cookieless Vercel Web Analytics runs to measure basic traffic and popular pages. Optional PostHog analytics and Meta marketing use browser identifiers only if you choose them. You can change your mind at any time.</p>
 
         <ConsentChoices preferences={preferences} disabled={isAcceptingAll} onChange={setPreferences} />
 
