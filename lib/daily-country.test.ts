@@ -8,6 +8,7 @@ import {
   getCurrentDailyCountryStreak,
   getDailyCountryClues,
   getDailyCountryDateKey,
+  getDailyCountryGuessFeedback,
   getDailyCountryPuzzle,
   getDailyCountryPuzzleNumber,
   getMillisecondsUntilNextDailyCountry,
@@ -41,6 +42,21 @@ describe("daily country puzzle", () => {
     expect(clues.at(-1)?.flagCode).toBeTruthy();
   });
 
+  it("does not repeat a continent already named by the regional location clue", () => {
+    const madagascar = COUNTRIES.find((country) => country.code === "mg");
+    expect(madagascar).toBeDefined();
+    if (!madagascar) return;
+
+    const basePuzzle = getDailyCountryPuzzle(new Date(DAILY_COUNTRY_EPOCH + "T00:00:00.000Z"));
+    const clues = getDailyCountryClues({
+      ...basePuzzle,
+      country: madagascar,
+      facts: getDailyCountryFacts(madagascar),
+    });
+
+    expect(clues.find((clue) => clue.id === "location")?.text).toBe("It is in Eastern Africa.");
+  });
+
   it("has a complete local clue record for every playable country", () => {
     for (const country of COUNTRIES) {
       const facts = getDailyCountryFacts(country);
@@ -51,6 +67,25 @@ describe("daily country puzzle", () => {
       expect(facts.geography).toBeTruthy();
       expect(facts.capital).toBeTruthy();
     }
+  });
+
+  it("gives every country offline distance and directional guess feedback", () => {
+    for (const country of COUNTRIES) {
+      const feedback = getDailyCountryGuessFeedback(country.name, country);
+      expect(feedback.country?.code).toBe(country.code);
+      expect(feedback.distanceKm).toBe(0);
+      expect(feedback.direction?.arrow).toBe("•");
+      expect(feedback.proximity).toBe(100);
+    }
+
+    const madagascar = COUNTRIES.find((country) => country.code === "mg");
+    expect(madagascar).toBeDefined();
+    if (!madagascar) return;
+
+    const feedback = getDailyCountryGuessFeedback("Niger", madagascar);
+    expect(feedback.distanceKm).toBeGreaterThan(4_000);
+    expect(feedback.direction?.arrow).toBe("↘");
+    expect(feedback.proximity).toBeLessThan(80);
   });
 
   it("calculates the UTC countdown to the next puzzle", () => {

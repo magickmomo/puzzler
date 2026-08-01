@@ -3,7 +3,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { GameMode } from "./flag-quiz";
-import type { DailyCountryOutcome, DailyCountryOutcomeStatus } from "./daily-country";
+import { DAILY_COUNTRY_CLUE_LIMIT, type DailyCountryOutcome, type DailyCountryOutcomeStatus } from "./daily-country";
 import {
   createEmptyFlagStatsByMode,
   recordFlagAttempt as updateFlagAttempt,
@@ -43,7 +43,8 @@ type PuzzlerStore = {
   resetFlagBlitzSettings: () => void;
   recordCapitalCitiesPlay: () => void;
   recordCapitalCitiesResult: (timeMs: number) => void;
-  recordDailyCountryOutcome: (dateKey: string, status: DailyCountryOutcomeStatus, guessesUsed: number) => void;
+  recordDailyCountryOutcome: (dateKey: string, status: DailyCountryOutcomeStatus, guessesUsed: number, guesses?: string[], selectedClueIds?: DailyCountryOutcome["selectedClueIds"]) => void;
+  clearDailyCountryOutcome: (dateKey: string) => void;
 };
 
 type LegacyFlagStatsByMode = Partial<Record<GameMode | "speed-match-unlimited", Record<string, FlagAttemptStats>>>;
@@ -52,6 +53,8 @@ type LegacyPlayerRecords = Omit<Partial<FlagBlitzProfile>, "flagStatsByMode"> & 
   settings?: PuzzlerSettings;
   flagStatsByMode?: LegacyFlagStatsByMode;
 };
+
+const DAILY_COUNTRY_CLUE_ID_SET = new Set(["location", "population", "language", "geography", "capital", "flag"]);
 
 export function createDefaultFlagBlitzProfile(): FlagBlitzProfile {
   return {
@@ -99,9 +102,18 @@ function migrateDailyCountryProfile(profile: Partial<DailyCountryProfile> | unde
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return [];
     if (!outcome || !["in-progress", "solved", "failed"].includes(outcome.status)) return [];
 
+    const guesses = Array.isArray(outcome.guesses)
+      ? outcome.guesses.filter((guess): guess is string => typeof guess === "string" && guess.trim().length > 0 && guess.length <= 80).slice(0, 6)
+      : undefined;
+    const selectedClueIds = Array.isArray(outcome.selectedClueIds)
+      ? outcome.selectedClueIds.filter((id): id is NonNullable<DailyCountryOutcome["selectedClueIds"]>[number] => typeof id === "string" && DAILY_COUNTRY_CLUE_ID_SET.has(id)).slice(0, DAILY_COUNTRY_CLUE_LIMIT)
+      : undefined;
+
     return [[dateKey, {
       status: outcome.status,
       guessesUsed: Math.max(0, Math.min(6, Math.floor(outcome.guessesUsed))),
+      ...(guesses?.length ? { guesses } : {}),
+      ...(selectedClueIds?.length ? { selectedClueIds } : {}),
     }]];
   }));
 
@@ -210,21 +222,27 @@ export const usePuzzlerStore = create<PuzzlerStore>()(
             : Math.min(state.capitalCities.bestTimeMs, timeMs),
         },
       })),
-      recordDailyCountryOutcome: (dateKey, status, guessesUsed) => set((state) => ({
+      recordDailyCountryOutcome: (dateKey, status, guessesUsed, guesses, selectedClueIds) => set((state) => ({
         dailyCountry: {
           outcomes: {
             ...state.dailyCountry.outcomes,
             [dateKey]: {
               status,
               guessesUsed: Math.max(0, Math.min(6, Math.floor(guessesUsed))),
+              ...(guesses?.length ? { guesses: guesses.slice(0, 6) } : {}),
+              ...(selectedClueIds?.length ? { selectedClueIds: selectedClueIds.slice(0, DAILY_COUNTRY_CLUE_LIMIT) } : {}),
             },
           },
         },
       })),
+      clearDailyCountryOutcome: (dateKey) => set((state) => {
+        const { [dateKey]: _clearedOutcome, ...outcomes } = state.dailyCountry.outcomes;
+        return { dailyCountry: { outcomes } };
+      }),
     }),
     {
       name: "puzzler-player-records",
-      version: 8,
+      version: 10,
       migrate: migratePlayerRecords,
       partialize: (state) => ({
         flagBlitz: state.flagBlitz,

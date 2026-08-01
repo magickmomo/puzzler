@@ -90,7 +90,7 @@ export default function PrivacyPage() {
 
           <section>
             <h2 className="text-lg font-black text-white">Cookies and browser storage</h2>
-            <p className="mt-2">Puzzler uses browser storage, not only traditional cookies. Necessary local storage keeps your saved Cookie settings and local game records. Those records stay on this device and are not sent to Pocket Arcade. Vercel Web Analytics does not use third-party cookies or Puzzler&apos;s browser storage. PostHog and Meta do not load or access their browser storage until you choose the relevant category.</p>
+            <p className="mt-2">Puzzler uses browser storage, not only traditional cookies. Necessary local storage keeps your saved Cookie settings and local game records, including Daily Challenge guesses. A temporary session-storage entry may cache the current Daily Challenge outline so it does not need to be downloaded again after a refresh. These records stay on this device and are not sent to Pocket Arcade. Vercel Web Analytics does not use third-party cookies or Puzzler&apos;s browser storage. PostHog and Meta do not load or access their browser storage until you choose the relevant category.</p>
             <ul className="mt-3 list-disc space-y-1 pl-5 text-slate-400">
               <li>Consent and local game records remain in your browser until you change your choice, clear Puzzler&apos;s site data, or your browser removes them.</li>
               <li>The random Analytics browser ID and campaign attribution are removed when Analytics consent is withdrawn. Each first-completion delivery flag is removed when its related optional consent is withdrawn, and is read only while that consent remains active.</li>

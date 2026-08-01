@@ -96,7 +96,7 @@ describe("player-record migration", () => {
       capitalCities: {},
       dailyCountry: {
         outcomes: {
-          "2026-07-27": { status: "solved", guessesUsed: 2 },
+          "2026-07-27": { status: "solved", guessesUsed: 2, guesses: ["France", "", "x".repeat(81)], selectedClueIds: ["location", "language", "not-a-clue", "capital"] },
           "not-a-date": { status: "failed", guessesUsed: 6 },
         },
       },
@@ -104,7 +104,7 @@ describe("player-record migration", () => {
 
     expect(migrated.dailyCountry).toEqual({
       outcomes: {
-        "2026-07-27": { status: "solved", guessesUsed: 2 },
+        "2026-07-27": { status: "solved", guessesUsed: 2, guesses: ["France"], selectedClueIds: ["location", "language", "capital"] },
       },
     });
   });
