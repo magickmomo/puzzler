@@ -209,6 +209,33 @@ describe("analytics consent gates", () => {
 });
 
 describe("analytics data minimisation", () => {
+  it("records Daily Challenge sharing without country-level data", () => {
+    expect(sanitizePostHogEvent({
+      event: "daily_country_shared",
+      properties: {
+        token: "test-token",
+        distinct_id: "visitor",
+        $process_person_profile: false,
+        puzzle_number: 7,
+        solved: true,
+        guesses_used: 3,
+        share_method: "native",
+        country: "France",
+      },
+    })).toEqual({
+      event: "daily_country_shared",
+      properties: {
+        token: "test-token",
+        distinct_id: "visitor",
+        $process_person_profile: false,
+        puzzle_number: 7,
+        solved: true,
+        guesses_used: 3,
+        share_method: "native",
+      },
+    });
+  });
+
   it("accepts the daily country game without permitting typed answers", () => {
     expect(sanitizePostHogEvent({
       event: "game_completed",

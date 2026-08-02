@@ -29,6 +29,29 @@ export type DailyCountryClue = {
   flagCode?: string;
 };
 
+export function getDailyCountryClueUnlockRequirement(clueId: DailyCountryClue["id"]): number {
+  // The flag is intentionally the strongest clue, so it arrives later than the
+  // textual hints. This prevents an immediate, free reveal of the answer's flag.
+  return clueId === "flag" ? 3 : 1;
+}
+
+export function canSelectDailyCountryClue({
+  clueId,
+  incorrectGuesses,
+  selectedClueIds,
+  isComplete,
+}: {
+  clueId: DailyCountryClue["id"];
+  incorrectGuesses: number;
+  selectedClueIds: readonly DailyCountryClue["id"][];
+  isComplete: boolean;
+}): boolean {
+  return !isComplete
+    && !selectedClueIds.includes(clueId)
+    && selectedClueIds.length < Math.min(DAILY_COUNTRY_CLUE_LIMIT, incorrectGuesses)
+    && incorrectGuesses >= getDailyCountryClueUnlockRequirement(clueId);
+}
+
 export type DailyCountryGuessFeedback = {
   country: Country | null;
   distanceKm: number | null;

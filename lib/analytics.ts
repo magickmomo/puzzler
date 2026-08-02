@@ -98,6 +98,12 @@ export type AnalyticsEventProperties = {
     mistakes: number;
     share_method: "native" | "copy";
   };
+  daily_country_shared: {
+    puzzle_number: number;
+    solved: boolean;
+    guesses_used: number;
+    share_method: "native" | "copy";
+  };
   first_game_completed: { game: AnalyticsGame };
 };
 
@@ -191,6 +197,7 @@ const ANALYTICS_EVENT_NAMES = [
   "flag_match_challenge_completed",
   "flag_match_challenge_shared",
   "flag_match_challenge_reshared",
+  "daily_country_shared",
   "first_game_completed",
 ] as const satisfies readonly AnalyticsEventName[];
 
@@ -217,6 +224,9 @@ const ANALYTICS_EVENT_PROPERTY_KEYS = new Set<string>([
   "challenger_score",
   "challenge_outcome",
   "share_method",
+  "puzzle_number",
+  "solved",
+  "guesses_used",
   "landing_path",
   ...CAMPAIGN_PARAMETERS,
 ]);
@@ -360,9 +370,10 @@ function isSafeAnalyticsProperty(key: string, value: unknown): value is Analytic
   if (key === "exit_reason") return value === "hub" || value === "restart";
   if (key === "challenge_outcome") return value === "win" || value === "loss" || value === "draw";
   if (key === "share_method") return value === "native" || value === "copy";
-  if (key === "score" || key === "duration_ms" || key === "mistakes" || key === "attempts" || key === "game_run_number" || key === "pool_size" || key === "challenger_score") {
+  if (key === "score" || key === "duration_ms" || key === "mistakes" || key === "attempts" || key === "game_run_number" || key === "pool_size" || key === "challenger_score" || key === "puzzle_number" || key === "guesses_used") {
     return typeof value === "number" && Number.isFinite(value) && value >= 0;
   }
+  if (key === "solved") return typeof value === "boolean";
   if (WEB_VITAL_PROPERTY_KEYS.has(key)) return typeof value === "number" && Number.isFinite(value) && value >= 0;
 
   return false;
@@ -875,6 +886,10 @@ export function trackFlagMatchChallengeShared(properties: AnalyticsEventProperti
 
 export function trackFlagMatchChallengeReshared(properties: AnalyticsEventProperties["flag_match_challenge_reshared"]): Promise<void> {
   return browserAnalytics.track("flag_match_challenge_reshared", properties);
+}
+
+export function trackDailyCountryShared(properties: AnalyticsEventProperties["daily_country_shared"]): Promise<void> {
+  return browserAnalytics.track("daily_country_shared", properties);
 }
 
 export function trackFirstGameCompletion(game: AnalyticsGame): Promise<void> {

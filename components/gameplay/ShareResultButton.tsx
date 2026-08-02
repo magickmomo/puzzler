@@ -28,7 +28,17 @@ async function copyToClipboard(value: string): Promise<boolean> {
   }
 }
 
-export function ShareResultButton({ message, path, tone }: { message: string; path: string; tone: ShareTone }) {
+export function ShareResultButton({
+  message,
+  path,
+  tone,
+  onShared,
+}: {
+  message: string;
+  path: string;
+  tone: ShareTone;
+  onShared?: (method: "native" | "copy") => void;
+}) {
   const [status, setStatus] = useState<"copied" | "shared" | "failed" | null>(null);
 
   async function shareResult() {
@@ -40,13 +50,16 @@ export function ShareResultButton({ message, path, tone }: { message: string; pa
       try {
         await navigator.share({ title: "Puzzler", text });
         setStatus("shared");
+        onShared?.("native");
         return;
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
       }
     }
 
-    setStatus(await copyToClipboard(text) ? "copied" : "failed");
+    const copied = await copyToClipboard(text);
+    setStatus(copied ? "copied" : "failed");
+    if (copied) onShared?.("copy");
   }
 
   return (

@@ -4,6 +4,7 @@ import { getDailyCountryFacts } from "@/app/data/daily-country-facts";
 import {
   DAILY_COUNTRY_EPOCH,
   DAILY_COUNTRY_GUESS_LIMIT,
+  canSelectDailyCountryClue,
   formatDailyCountryCountdown,
   getCurrentDailyCountryStreak,
   getDailyCountryClues,
@@ -40,6 +41,39 @@ describe("daily country puzzle", () => {
     expect(clues.map((clue) => clue.id)).toEqual(["location", "population", "language", "geography", "capital", "flag"]);
     expect(clues.slice(0, -1).every((clue) => clue.text)).toBe(true);
     expect(clues.at(-1)?.flagCode).toBeTruthy();
+  });
+
+  it("earns clues through incorrect guesses and holds the flag until three", () => {
+    expect(canSelectDailyCountryClue({
+      clueId: "location",
+      incorrectGuesses: 0,
+      selectedClueIds: [],
+      isComplete: false,
+    })).toBe(false);
+    expect(canSelectDailyCountryClue({
+      clueId: "location",
+      incorrectGuesses: 1,
+      selectedClueIds: [],
+      isComplete: false,
+    })).toBe(true);
+    expect(canSelectDailyCountryClue({
+      clueId: "language",
+      incorrectGuesses: 1,
+      selectedClueIds: ["location"],
+      isComplete: false,
+    })).toBe(false);
+    expect(canSelectDailyCountryClue({
+      clueId: "flag",
+      incorrectGuesses: 2,
+      selectedClueIds: [],
+      isComplete: false,
+    })).toBe(false);
+    expect(canSelectDailyCountryClue({
+      clueId: "flag",
+      incorrectGuesses: 3,
+      selectedClueIds: ["location", "language"],
+      isComplete: false,
+    })).toBe(true);
   });
 
   it("does not repeat a continent already named by the regional location clue", () => {

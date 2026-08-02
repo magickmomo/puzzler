@@ -5,14 +5,19 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   DAILY_COUNTRY_CLUE_LIMIT,
   DAILY_COUNTRY_GUESS_LIMIT,
+  canSelectDailyCountryClue,
+  formatDailyCountryCountdown,
+  getCurrentDailyCountryStreak,
   getDailyCountryClues,
   getDailyCountryGuessFeedback,
   getDailyCountryPuzzle,
+  getMillisecondsUntilNextDailyCountry,
 } from "@/lib/daily-country";
 import { SOVEREIGN_NATIONS, type Country } from "@/app/data/countries";
-import { trackFirstGameCompletion, trackGameAbandoned, trackGameCompleted, trackGameStarted, trackReplayStarted } from "@/lib/analytics";
+import { trackDailyCountryShared, trackFirstGameCompletion, trackGameAbandoned, trackGameCompleted, trackGameStarted, trackReplayStarted } from "@/lib/analytics";
 import { useCookieSettings } from "@/components/analytics/AnalyticsConsentProvider";
 import { CountryAutocomplete } from "@/components/gameplay/CountryAutocomplete";
+import { ShareResultButton } from "@/components/gameplay/ShareResultButton";
 import { usePuzzlerStore } from "@/lib/puzzler-store";
 
 const DAILY_SILHOUETTE_CACHE_KEY = "puzzler-daily-silhouette-v1";
@@ -73,6 +78,9 @@ export function DailyCountryChallenge({ onBack }: { onBack: () => void }) {
   const selectedClueIds = outcome?.selectedClueIds ?? [];
   const isComplete = outcome?.status === "solved" || outcome?.status === "failed";
   const canReplayInDevelopment = isDevelopmentMode;
+  const incorrectGuesses = outcome?.status === "solved" ? Math.max(0, guessesUsed - 1) : guessesUsed;
+  const currentStreak = getCurrentDailyCountryStreak(outcomes, new Date(now.getTime() + testDayOffset * DAY_MS));
+  const nextPuzzleCountdown = formatDailyCountryCountdown(getMillisecondsUntilNextDailyCountry(new Date(now.getTime() + testDayOffset * DAY_MS)));
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 1_000);
@@ -230,7 +238,12 @@ export function DailyCountryChallenge({ onBack }: { onBack: () => void }) {
   }
 
   function selectClue(clueId: (typeof clues)[number]["id"]) {
-    if (isComplete || selectedClueIds.includes(clueId) || selectedClueIds.length >= DAILY_COUNTRY_CLUE_LIMIT) return;
+    if (!canSelectDailyCountryClue({
+      clueId,
+      incorrectGuesses,
+      selectedClueIds,
+      isComplete,
+    })) return;
 
     recordOutcome(puzzle.dateKey, "in-progress", guessesUsed, previousGuesses, [...selectedClueIds, clueId]);
   }
@@ -239,7 +252,7 @@ export function DailyCountryChallenge({ onBack }: { onBack: () => void }) {
     <main className="mx-auto flex min-h-[100dvh] w-full max-w-4xl flex-col px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-8">
       <header className="relative flex min-h-14 items-center gap-3">
         <button type="button" onClick={abandonChallenge} className="relative z-10 flex min-h-12 items-center gap-2 rounded-xl px-2 text-sm font-bold text-slate-400 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300">
-          <span aria-hidden="true">←</span> Back to Puzzler
+          <span aria-hidden="true">←</span> Back to home
         </button>
         <p className="pointer-events-none absolute left-1/2 top-1/2 max-w-[52%] -translate-x-1/2 -translate-y-1/2 truncate text-center text-base font-black tracking-tight text-white">Daily Challenge · Puzzle #{puzzle.puzzleNumber}</p>
         {isDevelopmentMode ? (
@@ -256,8 +269,33 @@ export function DailyCountryChallenge({ onBack }: { onBack: () => void }) {
                 <p className={(outcome?.status === "solved" ? "text-emerald-300" : "text-rose-200") + " text-xs font-black uppercase tracking-[0.22em]"}>{outcome?.status === "solved" ? "Solved" : "Answer revealed"}</p>
                 <h2 className="mt-2 text-3xl font-black text-white">{puzzle.country.name}</h2>
                 <p className="mt-2 text-sm leading-6 text-slate-300">{outcome?.status === "solved" ? "You solved today’s country in " + guessesUsed + " " + (guessesUsed === 1 ? "guess." : "guesses.") : "Come back tomorrow for a new country."}</p>
-                {canReplayInDevelopment && <button type="button" onClick={replayChallenge} className="mt-5 min-h-12 w-full rounded-xl border border-amber-300/40 bg-amber-300/10 px-4 font-black text-amber-100 transition hover:bg-amber-300/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300">Replay today&apos;s challenge</button>}
-                <button type="button" onClick={abandonChallenge} className="mt-5 min-h-12 w-full rounded-xl border border-slate-700 bg-slate-900 px-4 font-black text-white transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300">Back to Puzzler</button>
+                <dl className="mx-auto mt-5 grid max-w-sm grid-cols-2 divide-x divide-slate-700/70 rounded-2xl border border-slate-700/70 bg-slate-950/30">
+                  <div className="px-4 py-3">
+                    <dt className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Streak</dt>
+                    <dd className="mt-1 text-lg font-black text-amber-300">{currentStreak} {currentStreak === 1 ? "day" : "days"}</dd>
+                  </div>
+                  <div className="px-4 py-3">
+                    <dt className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Next puzzle</dt>
+                    <dd className="mt-1 text-lg font-black tabular-nums text-white">{nextPuzzleCountdown}</dd>
+                  </div>
+                </dl>
+                <div className="mx-auto mt-5 max-w-sm space-y-3">
+                  <ShareResultButton
+                    message={outcome?.status === "solved"
+                      ? `I solved Puzzler Daily Challenge #${puzzle.puzzleNumber} in ${guessesUsed}/${DAILY_COUNTRY_GUESS_LIMIT} guesses.`
+                      : `I took on Puzzler Daily Challenge #${puzzle.puzzleNumber}. Can you solve it?`}
+                    path="/daily-challenge"
+                    tone="amber"
+                    onShared={(shareMethod) => void trackDailyCountryShared({
+                      puzzle_number: puzzle.puzzleNumber,
+                      solved: outcome?.status === "solved",
+                      guesses_used: guessesUsed,
+                      share_method: shareMethod,
+                    })}
+                  />
+                  {canReplayInDevelopment && <button type="button" onClick={replayChallenge} className="min-h-12 w-full rounded-xl border border-amber-300/40 bg-amber-300/10 px-4 font-black text-amber-100 transition hover:bg-amber-300/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300">Replay today&apos;s challenge</button>}
+                  <button type="button" onClick={abandonChallenge} className="min-h-12 w-full rounded-xl border border-slate-700 bg-slate-900 px-4 font-black text-white transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300">Back to home</button>
+                </div>
               </section>
             ) : (
               <div className="overflow-hidden rounded-3xl border border-amber-300/25 bg-slate-900/80 shadow-glow">
@@ -314,7 +352,7 @@ export function DailyCountryChallenge({ onBack }: { onBack: () => void }) {
                     const displayedName = details.country?.name ?? guess;
 
                     return (
-                      <li key={`${guess}-${attempt}`} className="relative flex min-h-20 items-center gap-3 px-4 py-3">
+                      <li key={`${guess}-${attempt}`} className="relative flex min-h-16 items-center gap-3 px-4 py-2">
                         <div className="flex min-w-0 max-w-[36%] items-center gap-3">
                           <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-slate-800 text-xs font-black tabular-nums text-slate-400">{attempt}</span>
                           <p className="truncate text-sm font-black leading-none text-white">{displayedName}</p>
@@ -346,21 +384,31 @@ export function DailyCountryChallenge({ onBack }: { onBack: () => void }) {
                 <h2 id="daily-country-clues" className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">Choose clues</h2>
                 <span className="text-xs font-bold tabular-nums text-slate-400">{selectedClueIds.length}/{DAILY_COUNTRY_CLUE_LIMIT}</span>
               </div>
+              <p className="mt-2 text-xs font-semibold leading-5 text-slate-500">Earn one clue after each incorrect guess. The flag unlocks after three.</p>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 {clues.map((clue) => {
                   const selected = selectedClueIds.includes(clue.id);
-                  const unavailable = !selected && selectedClueIds.length >= DAILY_COUNTRY_CLUE_LIMIT;
+                  const canSelect = canSelectDailyCountryClue({
+                    clueId: clue.id,
+                    incorrectGuesses,
+                    selectedClueIds,
+                    isComplete,
+                  });
+                  const requirement = clue.id === "flag" ? 3 : 1;
+                  const locked = !selected && !canSelect;
 
                   return (
                     <button
                       key={clue.id}
                       type="button"
                       onClick={() => selectClue(clue.id)}
-                      disabled={isComplete || selected || unavailable}
+                      disabled={!canSelect}
                       aria-pressed={selected}
-                      className={`min-h-10 rounded-xl border px-2 text-left text-xs font-black transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 ${selected ? "cursor-default border-cyan-300/30 bg-cyan-300/10 text-cyan-100 opacity-75" : unavailable ? "border-slate-700 bg-slate-900 text-slate-300" : "border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 hover:text-white"} disabled:cursor-not-allowed`}
+                      title={locked && !isComplete ? `Unlock after ${requirement} incorrect ${requirement === 1 ? "guess" : "guesses"}` : undefined}
+                      className={`min-h-10 rounded-xl border px-2 text-left text-xs font-black transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 ${selected ? "cursor-default border-cyan-300/30 bg-cyan-300/10 text-cyan-100 opacity-75" : locked ? "border-slate-800 bg-slate-950/40 text-slate-600" : "border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 hover:text-white"} disabled:cursor-not-allowed`}
                     >
-                      {clue.label}
+                      <span>{clue.label}</span>
+                      {locked && !isComplete && <span className="mt-0.5 block text-[9px] font-bold uppercase tracking-wide">{requirement} wrong</span>}
                     </button>
                   );
                 })}
@@ -371,7 +419,7 @@ export function DailyCountryChallenge({ onBack }: { onBack: () => void }) {
                     <h3 id="daily-country-how-to-play" className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">How to play</h3>
                     <ol className="mt-2 space-y-2 text-xs font-semibold leading-5 text-slate-400">
                       <li><span className="mr-2 text-cyan-300">1.</span>Study the map outline.</li>
-                      <li><span className="mr-2 text-cyan-300">2.</span>Unlock up to three clues for help.</li>
+                      <li><span className="mr-2 text-cyan-300">2.</span>Each incorrect guess unlocks a clue.</li>
                       <li><span className="mr-2 text-cyan-300">3.</span>Guess the country in six tries.</li>
                     </ol>
                   </section>
