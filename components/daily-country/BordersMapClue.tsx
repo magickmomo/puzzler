@@ -215,22 +215,23 @@ export function BordersMapClue({
   fallbackPath,
   isolated = false,
   revealContext = false,
+  traceReveal = true,
   className,
 }: {
   countryCode: string;
   fallbackPath?: string | null;
   isolated?: boolean;
   revealContext?: boolean;
+  traceReveal?: boolean;
   className?: string;
 }) {
   const [map, setMap] = useState<BorderMap | null | undefined>(undefined);
-  const [revealPhase, setRevealPhase] = useState<RevealPhase>(revealContext ? "tracing" : "complete");
-  const [hasTraceFinished, setHasTraceFinished] = useState(!revealContext);
+  const [revealPhase, setRevealPhase] = useState<RevealPhase>(revealContext ? (traceReveal ? "tracing" : "joining") : "complete");
+  const [hasTraceFinished, setHasTraceFinished] = useState(!revealContext || !traceReveal);
   const fallbackBounds = useMemo(() => fallbackPath ? getPathBounds(fallbackPath) : null, [fallbackPath]);
   const targetShape = map?.shapes.find((shape) => shape.isTarget) ?? null;
   const tracePath = useMemo(() => targetShape ? createClockwiseTracePath(targetShape.path) : null, [targetShape]);
   const clipPathId = useId();
-  const expandedContext = isolated || revealContext;
 
   useEffect(() => {
     if (!countryCode) return;
@@ -262,19 +263,19 @@ export function BordersMapClue({
           return data?.geometry ? { code, geometry: data.geometry } : null;
         }));
 
-        if (!controller.signal.aborted) setMap(createBorderMap(boundaries.filter((feature): feature is RegionalFeature => feature !== null), countryCode, expandedContext));
+        if (!controller.signal.aborted) setMap(createBorderMap(boundaries.filter((feature): feature is RegionalFeature => feature !== null), countryCode, true));
       } catch {
         if (!controller.signal.aborted) setMap(null);
       }
     })();
 
     return () => controller.abort();
-  }, [countryCode, expandedContext]);
+  }, [countryCode]);
 
   useLayoutEffect(() => {
-    setRevealPhase(revealContext ? "tracing" : "complete");
-    setHasTraceFinished(!revealContext || !tracePath);
-  }, [countryCode, revealContext, tracePath]);
+    setRevealPhase(revealContext ? (traceReveal ? "tracing" : "joining") : "complete");
+    setHasTraceFinished(!revealContext || !traceReveal || !tracePath);
+  }, [countryCode, revealContext, tracePath, traceReveal]);
 
   useEffect(() => {
     if (!revealContext || !hasTraceFinished || !map || revealPhase !== "tracing") return;
@@ -293,12 +294,12 @@ export function BordersMapClue({
   if (map === undefined && !fallbackPath) return <p className="mt-2 text-xs font-semibold text-slate-500">Loading regional map…</p>;
 
   const showMap = map !== undefined && map !== null;
-  const isTracing = revealContext && revealPhase === "tracing";
+  const isTracing = revealContext && traceReveal && revealPhase === "tracing";
   const isJoining = revealContext && revealPhase === "joining";
   const showFallbackCountry = Boolean(fallbackPath) && !showMap;
   const revealTransform = createRevealTransform(fallbackBounds, map?.targetBounds ?? null);
-  const showCloseView = isolated || isTracing || isJoining;
-  const showFinalView = !isolated && (!revealContext || isJoining || revealPhase === "complete");
+  const showContext = !isolated && !isTracing;
+  const useCloseTransform = !revealContext || isTracing;
   return (
     <svg
       viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}
@@ -320,36 +321,33 @@ export function BordersMapClue({
           </g>
         )}
         {showMap && (
-          <>
-            {showCloseView && targetShape && (
-              <g transform={revealTransform ? `matrix(${revealTransform})` : undefined} className={isJoining ? "animate-daily-view-out" : undefined}>
-                <path d={targetShape.path} fill="#fcd34d" fillRule="evenodd" stroke={isolated || isTracing ? "transparent" : "#ffffff"} strokeWidth="1.2" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-                {isTracing && tracePath && (
-                  <path
-                    d={tracePath.path}
-                    fill="none"
-                    stroke="#ffffff"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    vectorEffect="non-scaling-stroke"
-                    className="animate-daily-border-trace"
-                    style={{ "--daily-trace-length": tracePath.length } as CSSProperties}
-                    onAnimationEnd={() => setHasTraceFinished(true)}
-                  />
-                )}
-              </g>
+          <g
+            transform={useCloseTransform && revealTransform ? `matrix(${revealTransform})` : undefined}
+            className={isJoining ? "animate-daily-map-reveal" : undefined}
+            style={isJoining && revealTransform ? { "--daily-reveal-transform": `matrix(${revealTransform})` } as CSSProperties : undefined}
+          >
+            {showContext && map.shapes.filter((shape) => !shape.isTarget).map((shape, index) => (
+              <path key={`nearby-${index}`} d={shape.path} fill="#334155" fillRule="evenodd" stroke="#ffffff" strokeWidth="0.45" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+            ))}
+            {targetShape && <path d={targetShape.path} fill="#fcd34d" fillRule="evenodd" stroke={isolated || isTracing ? "transparent" : "#ffffff"} strokeWidth="1.2" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
+            {isTracing && tracePath && (
+              <path
+                d={tracePath.path}
+                fill="none"
+                stroke="#ffffff"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                vectorEffect="non-scaling-stroke"
+                className="animate-daily-border-trace"
+                style={{ "--daily-trace-length": tracePath.length } as CSSProperties}
+                onAnimationEnd={() => setHasTraceFinished(true)}
+              />
             )}
-            {showFinalView && (
-              <g className={isJoining ? "animate-daily-view-in" : undefined}>
-                {map.shapes.filter((shape) => !shape.isTarget).map((shape, index) => (
-                  <path key={`nearby-${index}`} d={shape.path} fill="#334155" fillRule="evenodd" stroke="#ffffff" strokeWidth="0.45" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-                ))}
-                {targetShape && <path d={targetShape.path} fill="#fcd34d" fillRule="evenodd" stroke="#ffffff" strokeWidth="1.2" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
-                {map.marker && <circle cx={map.marker.x} cy={map.marker.y} r="2.25" fill="#fcd34d" stroke="#fef3c7" strokeWidth="0.7" />}
-              </g>
+            {showContext && map.marker && (
+              <circle cx={map.marker.x} cy={map.marker.y} r="2.25" fill="#fcd34d" stroke="#fef3c7" strokeWidth="0.7" />
             )}
-          </>
+          </g>
         )}
       </g>
     </svg>

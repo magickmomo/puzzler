@@ -59,21 +59,12 @@ input {
   }
 }
 
-@keyframes daily-view-out {
+@keyframes daily-map-reveal {
   from {
-    opacity: 1;
+    transform: var(--daily-reveal-transform, matrix(1, 0, 0, 1, 0, 0));
   }
   to {
-    opacity: 0;
-  }
-}
-
-@keyframes daily-view-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
+    transform: matrix(1, 0, 0, 1, 0, 0);
   }
 }
 
@@ -266,12 +257,10 @@ input {
   animation: daily-border-trace 1.1s linear forwards;
 }
 
-.animate-daily-view-out {
-  animation: daily-view-out 650ms ease-in-out both;
-}
-
-.animate-daily-view-in {
-  animation: daily-view-in 650ms ease-in-out both;
+.animate-daily-map-reveal {
+  transform-box: view-box;
+  transform-origin: 0 0;
+  animation: daily-map-reveal 650ms ease-in-out both;
 }
 
 .animate-answer-shake {
@@ -321,6 +310,7 @@ input {
 
 @media (prefers-reduced-motion: reduce) {
   .animate-answer-success,
+  .animate-daily-map-reveal,
   .animate-answer-shake,
   .animate-answer-error,
   .animate-wrong-flag-overlay,

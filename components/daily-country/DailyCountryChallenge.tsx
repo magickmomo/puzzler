@@ -363,7 +363,7 @@ export function DailyCountryChallenge({ onBack }: { onBack: () => void }) {
           <div>
             <div className="overflow-hidden rounded-3xl border border-amber-300/25 bg-slate-900/80 shadow-glow">
               <div className="grid min-h-[min(40vh,21rem)] place-items-center p-3 sm:p-4" aria-busy={!showRegionalMap && silhouettePath === undefined}>
-                <BordersMapClue countryCode={puzzle.country.code} fallbackPath={silhouettePath} isolated={!showRegionalMap} revealContext={isComplete && !hasBordersClue} className="h-[min(37vh,19rem)] w-full max-w-lg text-amber-300" />
+                <BordersMapClue countryCode={puzzle.country.code} fallbackPath={silhouettePath} isolated={!showRegionalMap} revealContext={isComplete} traceReveal={!hasBordersClue} className="h-[min(37vh,19rem)] w-full max-w-lg text-amber-300" />
               </div>
             </div>
             {isComplete && (
