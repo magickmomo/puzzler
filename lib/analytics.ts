@@ -35,7 +35,8 @@ export type AnalyticsDifficulty = "easy" | "medium" | "hard";
 export type GameEndReason = "cleared" | "wrong_answer" | "timeout" | "saved";
 export type GameExitReason = "hub" | "restart";
 
-export type AnalyticsEventProperties = {
+/** The central, privacy-reviewed catalogue of every event Puzzler may send. */
+export type AnalyticsEvents = {
   ad_landing_viewed: { landing_path: string } & CampaignAttribution;
   game_selected: { game: AnalyticsGame };
   game_mode_selected: { game: "flag_blitz"; mode: FlagBlitzMode };
@@ -75,6 +76,10 @@ export type AnalyticsEventProperties = {
     difficulty?: AnalyticsDifficulty;
     timer_enabled?: boolean;
   };
+  result_shared: {
+    game: AnalyticsGame;
+    method: "native" | "clipboard";
+  };
   flag_match_challenge_opened: { pool_size: number; challenger_score: number };
   flag_match_challenge_started: { pool_size: number; challenger_score: number };
   flag_match_challenge_completed: {
@@ -98,16 +103,14 @@ export type AnalyticsEventProperties = {
     mistakes: number;
     share_method: "native" | "copy";
   };
-  daily_country_shared: {
-    puzzle_number: number;
-    solved: boolean;
-    guesses_used: number;
-    share_method: "native" | "copy";
-  };
   first_game_completed: { game: AnalyticsGame };
 };
 
-export type AnalyticsEventName = keyof AnalyticsEventProperties;
+/** @deprecated Use AnalyticsEvents for newly added events. */
+export type AnalyticsEventProperties = AnalyticsEvents;
+
+export type AnalyticsEventName = keyof AnalyticsEvents;
+export type AnalyticsFunnelEventName = "game_selected" | "game_started" | "game_completed" | "game_abandoned" | "replay_started" | "result_shared";
 
 export type AnalyticsConfig = {
   enabled: boolean;
@@ -192,12 +195,12 @@ const ANALYTICS_EVENT_NAMES = [
   "game_completed",
   "game_abandoned",
   "replay_started",
+  "result_shared",
   "flag_match_challenge_opened",
   "flag_match_challenge_started",
   "flag_match_challenge_completed",
   "flag_match_challenge_shared",
   "flag_match_challenge_reshared",
-  "daily_country_shared",
   "first_game_completed",
 ] as const satisfies readonly AnalyticsEventName[];
 
@@ -224,9 +227,7 @@ const ANALYTICS_EVENT_PROPERTY_KEYS = new Set<string>([
   "challenger_score",
   "challenge_outcome",
   "share_method",
-  "puzzle_number",
-  "solved",
-  "guesses_used",
+  "method",
   "landing_path",
   ...CAMPAIGN_PARAMETERS,
 ]);
@@ -370,10 +371,10 @@ function isSafeAnalyticsProperty(key: string, value: unknown): value is Analytic
   if (key === "exit_reason") return value === "hub" || value === "restart";
   if (key === "challenge_outcome") return value === "win" || value === "loss" || value === "draw";
   if (key === "share_method") return value === "native" || value === "copy";
-  if (key === "score" || key === "duration_ms" || key === "mistakes" || key === "attempts" || key === "game_run_number" || key === "pool_size" || key === "challenger_score" || key === "puzzle_number" || key === "guesses_used") {
+  if (key === "method") return value === "native" || value === "clipboard";
+  if (key === "score" || key === "duration_ms" || key === "mistakes" || key === "attempts" || key === "game_run_number" || key === "pool_size" || key === "challenger_score") {
     return typeof value === "number" && Number.isFinite(value) && value >= 0;
   }
-  if (key === "solved") return typeof value === "boolean";
   if (WEB_VITAL_PROPERTY_KEYS.has(key)) return typeof value === "number" && Number.isFinite(value) && value >= 0;
 
   return false;
@@ -845,7 +846,11 @@ export function captureMetaPageView(path: string): Promise<void> {
 }
 
 export function trackGameSelected(game: AnalyticsGame): Promise<void> {
-  return browserAnalytics.track("game_selected", { game });
+  return trackFunnelEvent("game_selected", { game });
+}
+
+export function trackFunnelEvent<Name extends AnalyticsFunnelEventName>(event: Name, properties: AnalyticsEvents[Name]): Promise<void> {
+  return browserAnalytics.track(event, properties);
 }
 
 export function trackGameModeSelected(mode: FlagBlitzMode): Promise<void> {
@@ -888,8 +893,8 @@ export function trackFlagMatchChallengeReshared(properties: AnalyticsEventProper
   return browserAnalytics.track("flag_match_challenge_reshared", properties);
 }
 
-export function trackDailyCountryShared(properties: AnalyticsEventProperties["daily_country_shared"]): Promise<void> {
-  return browserAnalytics.track("daily_country_shared", properties);
+export function trackResultShared(properties: AnalyticsEvents["result_shared"]): Promise<void> {
+  return trackFunnelEvent("result_shared", properties);
 }
 
 export function trackFirstGameCompletion(game: AnalyticsGame): Promise<void> {

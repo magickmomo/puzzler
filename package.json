@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "next dev --turbopack",
+    "build": "NEXT_DIST_DIR=.next-production next build",
+    "generate:country-borders": "node scripts/generate-country-border-regions.mjs",
+    "start": "NEXT_DIST_DIR=.next-production next start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

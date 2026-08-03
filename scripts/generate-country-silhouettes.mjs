@@ -119,7 +119,7 @@ const silhouettes = countryCodes.filter((code) => !temporarilyDisabledCodes.has(
   const feature = overrideFeatures.get(code) ?? getFeatureForCode(code);
   if (!feature) throw new Error(`Missing Natural Earth geometry for ${code}.`);
   const allPolygons = getPolygons(feature.geometry);
-  const polygons = getHomeRegionPolygons(allPolygons);
+  const polygons = code === "ca" ? allPolygons : getHomeRegionPolygons(allPolygons);
   return [code, toPath(polygons.flat())];
 });
 

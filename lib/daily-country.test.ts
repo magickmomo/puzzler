@@ -6,6 +6,7 @@ import {
   DAILY_COUNTRY_GUESS_LIMIT,
   canSelectDailyCountryClue,
   formatDailyCountryCountdown,
+  hasGuessedDailyCountry,
   getCurrentDailyCountryStreak,
   getDailyCountryClues,
   getDailyCountryDateKey,
@@ -34,44 +35,38 @@ describe("daily country puzzle", () => {
     expect(new Set(countries)).toHaveLength(SOVEREIGN_NATIONS.length);
   });
 
-  it("reveals the six clues in their fixed order with complete facts", () => {
+  it("reveals the four information clues in their fixed order with complete facts", () => {
     const clues = getDailyCountryClues(getDailyCountryPuzzle(new Date(DAILY_COUNTRY_EPOCH + "T00:00:00.000Z")));
 
     expect(DAILY_COUNTRY_GUESS_LIMIT).toBe(6);
-    expect(clues.map((clue) => clue.id)).toEqual(["location", "population", "language", "geography", "capital", "flag"]);
-    expect(clues.slice(0, -1).every((clue) => clue.text)).toBe(true);
-    expect(clues.at(-1)?.flagCode).toBeTruthy();
+    expect(clues.map((clue) => clue.id)).toEqual(["location", "population", "language", "borders"]);
+    expect(clues.slice(0, 3).every((clue) => clue.text)).toBe(true);
+    expect(clues.at(-1)?.countryCode).toBeTruthy();
   });
 
-  it("earns clues through incorrect guesses and holds the flag until three", () => {
+  it("unlocks the first clue after three incorrect guesses, then one per guess", () => {
     expect(canSelectDailyCountryClue({
       clueId: "location",
-      incorrectGuesses: 0,
-      selectedClueIds: [],
-      isComplete: false,
-    })).toBe(false);
-    expect(canSelectDailyCountryClue({
-      clueId: "location",
-      incorrectGuesses: 1,
-      selectedClueIds: [],
-      isComplete: false,
-    })).toBe(true);
-    expect(canSelectDailyCountryClue({
-      clueId: "language",
-      incorrectGuesses: 1,
-      selectedClueIds: ["location"],
-      isComplete: false,
-    })).toBe(false);
-    expect(canSelectDailyCountryClue({
-      clueId: "flag",
       incorrectGuesses: 2,
       selectedClueIds: [],
       isComplete: false,
     })).toBe(false);
     expect(canSelectDailyCountryClue({
-      clueId: "flag",
+      clueId: "location",
       incorrectGuesses: 3,
-      selectedClueIds: ["location", "language"],
+      selectedClueIds: [],
+      isComplete: false,
+    })).toBe(true);
+    expect(canSelectDailyCountryClue({
+      clueId: "language",
+      incorrectGuesses: 3,
+      selectedClueIds: ["location"],
+      isComplete: false,
+    })).toBe(false);
+    expect(canSelectDailyCountryClue({
+      clueId: "borders",
+      incorrectGuesses: 4,
+      selectedClueIds: ["location"],
       isComplete: false,
     })).toBe(true);
   });
@@ -120,6 +115,12 @@ describe("daily country puzzle", () => {
     expect(feedback.distanceKm).toBeGreaterThan(4_000);
     expect(feedback.direction?.arrow).toBe("↘");
     expect(feedback.proximity).toBeLessThan(80);
+  });
+
+  it("recognises prior guesses by country code, including aliases", () => {
+    expect(hasGuessedDailyCountry(["France"], "fr")).toBe(true);
+    expect(hasGuessedDailyCountry(["Turkey"], "tr")).toBe(true);
+    expect(hasGuessedDailyCountry(["France"], "de")).toBe(false);
   });
 
   it("calculates the UTC countdown to the next puzzle", () => {

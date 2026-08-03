@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { type AnalyticsGame, trackResultShared } from "@/lib/analytics";
 import { createShareText } from "@/lib/share-result";
 
 type ShareTone = "cyan" | "violet" | "amber";
@@ -32,12 +33,12 @@ export function ShareResultButton({
   message,
   path,
   tone,
-  onShared,
+  analytics,
 }: {
   message: string;
   path: string;
   tone: ShareTone;
-  onShared?: (method: "native" | "copy") => void;
+  analytics: { game: AnalyticsGame };
 }) {
   const [status, setStatus] = useState<"copied" | "shared" | "failed" | null>(null);
 
@@ -50,7 +51,7 @@ export function ShareResultButton({
       try {
         await navigator.share({ title: "Puzzler", text });
         setStatus("shared");
-        onShared?.("native");
+        void trackResultShared({ game: analytics.game, method: "native" });
         return;
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
@@ -59,12 +60,19 @@ export function ShareResultButton({
 
     const copied = await copyToClipboard(text);
     setStatus(copied ? "copied" : "failed");
-    if (copied) onShared?.("copy");
+    if (copied) void trackResultShared({ game: analytics.game, method: "clipboard" });
   }
 
   return (
     <div>
-      <button type="button" onClick={() => void shareResult()} className={`min-h-14 w-full rounded-2xl px-5 font-black transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950 ${TONE_CLASSES[tone]}`}>Share result</button>
+      <button type="button" onClick={() => void shareResult()} className={`flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl px-5 font-black transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-4 focus-visible:ring-offset-slate-950 ${TONE_CLASSES[tone]}`}>
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+          <path d="M12 16V3" />
+          <path d="m7 8 5-5 5 5" />
+          <path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" />
+        </svg>
+        <span>Share result</span>
+      </button>
       {status && <p className={`mt-3 text-center text-sm font-bold ${status === "failed" ? "text-rose-300" : "text-emerald-300"}`} aria-live="polite">{status === "shared" ? "Share sheet opened" : status === "copied" ? "Result and link copied" : "Couldn’t copy the result"}</p>}
     </div>
   );

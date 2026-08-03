@@ -305,7 +305,7 @@ export function CapitalCities({ onBack }: { onBack: () => void }) {
           <p className="mt-2 text-xs font-semibold text-slate-600">Each incorrect pair adds 2 seconds.</p>
 
           <div className="mx-auto mt-8 w-full max-w-sm space-y-3">
-            <ShareResultButton message={`I matched ${CAPITAL_MATCH_PAIR_COUNT} capitals in ${(elapsedMs / 1_000).toFixed(1)} seconds on Puzzler.`} path="/capital-cities" tone="violet" />
+            <ShareResultButton message={`I matched ${CAPITAL_MATCH_PAIR_COUNT} capitals in ${(elapsedMs / 1_000).toFixed(1)} seconds on Puzzler.`} path="/capital-cities" tone="violet" analytics={{ game: "capital_cities" }} />
             <button type="button" onClick={() => startRun(true)} className="min-h-14 w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 font-black text-white transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400">Play again</button>
             <button type="button" onClick={abandonRun} className="min-h-14 w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 font-black text-white transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400">Try another game</button>
           </div>

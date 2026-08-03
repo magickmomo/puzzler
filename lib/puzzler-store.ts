@@ -54,7 +54,7 @@ type LegacyPlayerRecords = Omit<Partial<FlagBlitzProfile>, "flagStatsByMode"> & 
   flagStatsByMode?: LegacyFlagStatsByMode;
 };
 
-const DAILY_COUNTRY_CLUE_ID_SET = new Set(["location", "population", "language", "geography", "capital", "flag"]);
+const DAILY_COUNTRY_CLUE_ID_SET = new Set(["location", "population", "language", "borders"]);
 
 export function createDefaultFlagBlitzProfile(): FlagBlitzProfile {
   return {
@@ -242,7 +242,7 @@ export const usePuzzlerStore = create<PuzzlerStore>()(
     }),
     {
       name: "puzzler-player-records",
-      version: 10,
+      version: 12,
       migrate: migratePlayerRecords,
       partialize: (state) => ({
         flagBlitz: state.flagBlitz,

@@ -209,30 +209,38 @@ describe("analytics consent gates", () => {
 });
 
 describe("analytics data minimisation", () => {
-  it("records Daily Challenge sharing without country-level data", () => {
+  it("records standard result sharing without country-level data", () => {
     expect(sanitizePostHogEvent({
-      event: "daily_country_shared",
+      event: "result_shared",
       properties: {
         token: "test-token",
         distinct_id: "visitor",
         $process_person_profile: false,
-        puzzle_number: 7,
-        solved: true,
-        guesses_used: 3,
-        share_method: "native",
+        game: "daily_country",
+        method: "native",
         country: "France",
       },
     })).toEqual({
-      event: "daily_country_shared",
+      event: "result_shared",
       properties: {
         token: "test-token",
         distinct_id: "visitor",
         $process_person_profile: false,
-        puzzle_number: 7,
-        solved: true,
-        guesses_used: 3,
-        share_method: "native",
+        game: "daily_country",
+        method: "native",
       },
+    });
+  });
+
+  it("delivers the standard result-sharing funnel event with consent", async () => {
+    const analytics = createTestAnalytics();
+
+    await analytics.client.setConsent({ analytics: true, marketing: false });
+    await analytics.client.track("result_shared", { game: "capital_cities", method: "clipboard" });
+
+    expect(analytics.posthogCalls.find((call) => call.event === "result_shared")?.properties).toMatchObject({
+      game: "capital_cities",
+      method: "clipboard",
     });
   });
 

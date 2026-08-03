@@ -23,16 +23,14 @@ export type DailyCountryPuzzle = {
 };
 
 export type DailyCountryClue = {
-  id: "location" | "population" | "language" | "geography" | "capital" | "flag";
+  id: "location" | "population" | "language" | "borders";
   label: string;
   text?: string;
-  flagCode?: string;
+  countryCode?: string;
 };
 
-export function getDailyCountryClueUnlockRequirement(clueId: DailyCountryClue["id"]): number {
-  // The flag is intentionally the strongest clue, so it arrives later than the
-  // textual hints. This prevents an immediate, free reveal of the answer's flag.
-  return clueId === "flag" ? 3 : 1;
+export function getDailyCountryClueUnlockRequirement(_clueId: DailyCountryClue["id"]): number {
+  return 3;
 }
 
 export function canSelectDailyCountryClue({
@@ -48,7 +46,7 @@ export function canSelectDailyCountryClue({
 }): boolean {
   return !isComplete
     && !selectedClueIds.includes(clueId)
-    && selectedClueIds.length < Math.min(DAILY_COUNTRY_CLUE_LIMIT, incorrectGuesses)
+    && selectedClueIds.length < Math.min(DAILY_COUNTRY_CLUE_LIMIT, Math.max(0, incorrectGuesses - 2))
     && incorrectGuesses >= getDailyCountryClueUnlockRequirement(clueId);
 }
 
@@ -71,6 +69,10 @@ const COUNTRY_COORDINATES = new Map(COORDINATE_ROWS.split(";").map((row) => {
   const [code, latitude, longitude] = row.split(",");
   return [code, { latitude: Number(latitude), longitude: Number(longitude) }];
 }));
+
+export function getDailyCountryCoordinate(countryCode: string): { latitude: number; longitude: number } | null {
+  return COUNTRY_COORDINATES.get(countryCode) ?? null;
+}
 
 const DIRECTION_INDICATORS = [
   { label: "North", arrow: "↑" },
@@ -133,6 +135,10 @@ function getRecognisedCountry(value: string): Country | null {
   return SOVEREIGN_NATIONS.find((country) => (
     [country.name, ...country.aliases].some((name) => normalizeAnswer(name) === answer)
   )) ?? null;
+}
+
+export function hasGuessedDailyCountry(guesses: readonly string[], countryCode: string): boolean {
+  return guesses.some((guess) => getRecognisedCountry(guess)?.code === countryCode);
 }
 
 export function getDailyCountryGuessFeedback(guess: string, target: Country): DailyCountryGuessFeedback {
@@ -209,9 +215,7 @@ export function getDailyCountryClues(puzzle: DailyCountryPuzzle): readonly Daily
     { id: "location", label: "Location", text: "It is in " + location + "." },
     { id: "population", label: "Population", text: "It has " + facts.populationBand + "." },
     { id: "language", label: "Language", text: "One official language is " + facts.language + "." },
-    { id: "geography", label: "Geography", text: facts.geography },
-    { id: "capital", label: "Capital", text: "Its capital is " + facts.capital + "." },
-    { id: "flag", label: "Flag", flagCode: country.code },
+    { id: "borders", label: "Borders", countryCode: country.code },
   ];
 }
 

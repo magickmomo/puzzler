@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { Changelog } from "@/components/Changelog";
 import { DailyCountryCard } from "@/components/daily-country/DailyCountryCard";
+import { ActionButton } from "@/components/gameplay/ActionButton";
 import { trackGameSelected } from "@/lib/analytics";
 
 type GameCardConfig = {
@@ -94,9 +95,9 @@ function HubHeader({ onOpenChangelog }: { onOpenChangelog: () => void }) {
           <h1 className="text-2xl font-black tracking-tight text-white">Puzzler</h1>
         </div>
       </div>
-      <button type="button" onClick={onOpenChangelog} className="flex min-h-12 shrink-0 items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/60 px-3 text-xs font-black uppercase tracking-wide text-slate-300 transition hover:border-cyan-300/50 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
+      <ActionButton analytics={false} analyticsReason="Opens local release notes outside the acquisition and retention funnel." onClick={onOpenChangelog} className="flex min-h-12 shrink-0 items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/60 px-3 text-xs font-black uppercase tracking-wide text-slate-300 transition hover:border-cyan-300/50 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
         <span aria-hidden="true">✦</span> What&apos;s new
-      </button>
+      </ActionButton>
     </header>
   );
 }
@@ -162,7 +163,7 @@ function Hub({ onOpenChangelog }: { onOpenChangelog: () => void }) {
         <div className="mb-5 flex items-end justify-between gap-4">
           <div>
             <p className="text-sm font-semibold text-slate-500">Play whenever you like.</p>
-            <h2 id="games-heading" className="mt-1 text-3xl font-black tracking-tight text-white">Practice arcade</h2>
+            <h2 id="games-heading" className="mt-1 text-3xl font-black tracking-tight text-white">Practice</h2>
           </div>
           <span className="hidden rounded-full border border-slate-800 px-3 py-2 text-xs font-bold text-slate-500 sm:block">3 games live</span>
         </div>

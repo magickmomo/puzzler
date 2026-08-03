@@ -42,10 +42,12 @@ export function CountryAutocomplete({
 
   function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === "ArrowDown") {
+      if (suggestions.length === 0) return;
       event.preventDefault();
       setIsOpen(true);
       setActiveIndex((index) => Math.min(index + 1, suggestions.length - 1));
     } else if (event.key === "ArrowUp") {
+      if (suggestions.length === 0) return;
       event.preventDefault();
       setIsOpen(true);
       setActiveIndex((index) => Math.max(index - 1, 0));
@@ -68,7 +70,9 @@ export function CountryAutocomplete({
           setIsOpen(true);
           setActiveIndex(0);
         }}
-        onFocus={() => setIsOpen(true)}
+        onFocus={() => {
+          if (!value.trim()) setIsOpen(false);
+        }}
         onBlur={() => setIsOpen(false)}
         onKeyDown={handleKeyDown}
         autoComplete="off"

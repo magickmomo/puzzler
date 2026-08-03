@@ -5,9 +5,10 @@ export const DEFAULT_COUNTRY_SUGGESTION_LIMIT = 8;
 
 export function getCountrySuggestions(query: string, countries: readonly Country[], limit = DEFAULT_COUNTRY_SUGGESTION_LIMIT): Country[] {
   const normalisedQuery = normalizeAnswer(query);
+  if (!normalisedQuery) return [];
 
   return [...countries]
-    .filter((country) => !normalisedQuery || [country.name, ...country.aliases].some((name) => normalizeAnswer(name).includes(normalisedQuery)))
+    .filter((country) => [country.name, ...country.aliases].some((name) => normalizeAnswer(name).includes(normalisedQuery)))
     .sort((left, right) => {
       const leftStartsWithQuery = normalizeAnswer(left.name).startsWith(normalisedQuery);
       const rightStartsWithQuery = normalizeAnswer(right.name).startsWith(normalisedQuery);

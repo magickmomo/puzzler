@@ -122,7 +122,7 @@ export function Results({
         )}
       </div>
       <div className="mx-auto mt-8 w-full max-w-sm space-y-3">
-        <ShareResultButton message={shareMessage} path="/flag-blitz" tone="cyan" />
+        <ShareResultButton message={shareMessage} path="/flag-blitz" tone="cyan" analytics={{ game: "flag_blitz" }} />
         <button type="button" onClick={onReplay} className="min-h-14 w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 font-black text-white transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400">Play again</button>
         <button type="button" onClick={onHub} className="min-h-14 w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 font-black text-white transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400">Try another game</button>
       </div>

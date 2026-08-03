@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   DAILY_COUNTRY_CLUE_LIMIT,
@@ -11,13 +10,16 @@ import {
   getDailyCountryClues,
   getDailyCountryGuessFeedback,
   getDailyCountryPuzzle,
+  hasGuessedDailyCountry,
   getMillisecondsUntilNextDailyCountry,
+  type DailyCountryClue,
 } from "@/lib/daily-country";
 import { SOVEREIGN_NATIONS, type Country } from "@/app/data/countries";
-import { trackDailyCountryShared, trackFirstGameCompletion, trackGameAbandoned, trackGameCompleted, trackGameStarted, trackReplayStarted } from "@/lib/analytics";
+import { trackFirstGameCompletion, trackGameAbandoned, trackGameCompleted, trackGameStarted, trackReplayStarted } from "@/lib/analytics";
 import { useCookieSettings } from "@/components/analytics/AnalyticsConsentProvider";
 import { CountryAutocomplete } from "@/components/gameplay/CountryAutocomplete";
 import { ShareResultButton } from "@/components/gameplay/ShareResultButton";
+import { BordersMapClue } from "@/components/daily-country/BordersMapClue";
 import { usePuzzlerStore } from "@/lib/puzzler-store";
 
 const DAILY_SILHOUETTE_CACHE_KEY = "puzzler-daily-silhouette-v1";
@@ -54,6 +56,76 @@ function cacheDailySilhouette(countryCode: string, path: string): void {
   }
 }
 
+function DailyCountryCluePanel({
+  clues,
+  selectedClueIds,
+  incorrectGuesses,
+  isComplete,
+  headingId,
+  onSelect,
+}: {
+  clues: readonly DailyCountryClue[];
+  selectedClueIds: readonly DailyCountryClue["id"][];
+  incorrectGuesses: number;
+  isComplete: boolean;
+  headingId: string;
+  onSelect: (clueId: DailyCountryClue["id"]) => void;
+}) {
+  return (
+    <div className="flex w-full flex-col">
+      <div className="flex items-center justify-between gap-3">
+        <h2 id={headingId} className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">Choose clues</h2>
+        <span className="text-xs font-bold tabular-nums text-slate-400">{selectedClueIds.length}/{DAILY_COUNTRY_CLUE_LIMIT}</span>
+      </div>
+      <p className="mt-2 text-xs font-semibold leading-5 text-slate-500">Your first clue unlocks after three incorrect guesses, then one per guess.</p>
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        {clues.map((clue) => {
+          const selected = selectedClueIds.includes(clue.id);
+          const canSelect = canSelectDailyCountryClue({
+            clueId: clue.id,
+            incorrectGuesses,
+            selectedClueIds,
+            isComplete,
+          });
+          const locked = !selected && !canSelect;
+
+          return (
+            <button
+              key={clue.id}
+              type="button"
+              onClick={() => onSelect(clue.id)}
+              disabled={!canSelect}
+              aria-pressed={selected}
+              title={locked && !isComplete ? "Unlock after another incorrect guess" : undefined}
+              className={`min-h-10 rounded-xl border px-2 text-left text-xs font-black transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 ${selected ? "cursor-default border-cyan-300/30 bg-cyan-300/10 text-cyan-100 opacity-75" : locked ? "border-slate-800 bg-slate-950/40 text-slate-600" : "border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 hover:text-white"} disabled:cursor-not-allowed`}
+            >
+              <span>{clue.label}</span>
+              {locked && !isComplete && <span className="mt-0.5 block text-[9px] font-bold uppercase tracking-wide">Locked</span>}
+            </button>
+          );
+        })}
+      </div>
+      <div className="mt-4 flex flex-1 flex-col">
+        {selectedClueIds.length === 0 ? (
+          <section className="mt-auto border-t border-slate-800 pt-4" aria-labelledby={`${headingId}-how-to-play`}>
+            <h3 id={`${headingId}-how-to-play`} className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">How to play</h3>
+            <ol className="mt-2 space-y-2 text-xs font-semibold leading-5 text-slate-400">
+              <li><span className="mr-2 text-cyan-300">1.</span>Study the map outline.</li>
+              <li><span className="mr-2 text-cyan-300">2.</span>Three incorrect guesses unlock your first clue.</li>
+              <li><span className="mr-2 text-cyan-300">3.</span>Guess the country in six tries.</li>
+            </ol>
+          </section>
+        ) : clues.filter((clue) => selectedClueIds.includes(clue.id)).map((clue) => (
+          <article key={clue.id} className="border-t border-slate-800 py-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">{clue.label}</p>
+            {clue.id === "borders" ? <p className="mt-1 text-xs font-bold leading-5 text-white">The regional borders map is now shown above.</p> : <p className="mt-1 text-xs font-bold leading-5 text-white">{clue.text}</p>}
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function DailyCountryChallenge({ onBack }: { onBack: () => void }) {
   const outcomes = usePuzzlerStore((state) => state.dailyCountry.outcomes);
   const recordOutcome = usePuzzlerStore((state) => state.recordDailyCountryOutcome);
@@ -65,6 +137,8 @@ export function DailyCountryChallenge({ onBack }: { onBack: () => void }) {
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [silhouettePath, setSilhouettePath] = useState<string | null | undefined>(undefined);
+  const [isClueDrawerOpen, setIsClueDrawerOpen] = useState(false);
+  const [hasNewClue, setHasNewClue] = useState(false);
   const startedAtRef = useRef(Date.now());
   const activeDateRef = useRef<string | null>(null);
   const gameStartedTrackedRef = useRef(false);
@@ -75,10 +149,14 @@ export function DailyCountryChallenge({ onBack }: { onBack: () => void }) {
   const outcome = outcomes[puzzle.dateKey];
   const guessesUsed = outcome?.guessesUsed ?? 0;
   const previousGuesses = outcome?.guesses ?? [];
+  const remainingGuessCountries = SOVEREIGN_NATIONS.filter((country) => !hasGuessedDailyCountry(previousGuesses, country.code));
   const selectedClueIds = outcome?.selectedClueIds ?? [];
+  const hasBordersClue = selectedClueIds.includes("borders");
   const isComplete = outcome?.status === "solved" || outcome?.status === "failed";
+  const showRegionalMap = hasBordersClue || isComplete;
   const canReplayInDevelopment = isDevelopmentMode;
   const incorrectGuesses = outcome?.status === "solved" ? Math.max(0, guessesUsed - 1) : guessesUsed;
+  const availableClueCount = Math.max(0, Math.min(DAILY_COUNTRY_CLUE_LIMIT, Math.max(0, incorrectGuesses - 2)) - selectedClueIds.length);
   const currentStreak = getCurrentDailyCountryStreak(outcomes, new Date(now.getTime() + testDayOffset * DAY_MS));
   const nextPuzzleCountdown = formatDailyCountryCountdown(getMillisecondsUntilNextDailyCountry(new Date(now.getTime() + testDayOffset * DAY_MS)));
 
@@ -86,6 +164,12 @@ export function DailyCountryChallenge({ onBack }: { onBack: () => void }) {
     const timer = window.setInterval(() => setNow(new Date()), 1_000);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (!hasNewClue) return;
+    const timer = window.setTimeout(() => setHasNewClue(false), 2_400);
+    return () => window.clearTimeout(timer);
+  }, [hasNewClue]);
 
   useEffect(() => {
     let cancelled = false;
@@ -123,6 +207,8 @@ export function DailyCountryChallenge({ onBack }: { onBack: () => void }) {
     setAnswer("");
     setSelectedCountry(null);
     setFeedback(null);
+    setIsClueDrawerOpen(false);
+    setHasNewClue(false);
     startedAtRef.current = Date.now();
     activeDateRef.current = null;
     gameStartedTrackedRef.current = false;
@@ -172,6 +258,7 @@ export function DailyCountryChallenge({ onBack }: { onBack: () => void }) {
     setAnswer("");
     setSelectedCountry(null);
     setFeedback(null);
+    setHasNewClue(false);
     startedAtRef.current = Date.now();
     activeDateRef.current = puzzle.dateKey;
     gameStartedTrackedRef.current = false;
@@ -182,6 +269,13 @@ export function DailyCountryChallenge({ onBack }: { onBack: () => void }) {
   function submitAnswer(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (isComplete || !selectedCountry) return;
+
+    if (hasGuessedDailyCountry(previousGuesses, selectedCountry.code)) {
+      setFeedback(`You already guessed ${selectedCountry.name}. Try another country.`);
+      setAnswer("");
+      setSelectedCountry(null);
+      return;
+    }
 
     const submittedAnswer = selectedCountry.name;
     const nextGuessesUsed = guessesUsed + 1;
@@ -231,6 +325,8 @@ export function DailyCountryChallenge({ onBack }: { onBack: () => void }) {
     } else {
       recordOutcome(puzzle.dateKey, "in-progress", nextGuessesUsed, nextGuesses, selectedClueIds);
       setFeedback(null);
+      const nextAvailableClueCount = Math.max(0, Math.min(DAILY_COUNTRY_CLUE_LIMIT, Math.max(0, nextGuessesUsed - 2)) - selectedClueIds.length);
+      if (nextAvailableClueCount > 0) setHasNewClue(true);
     }
 
     setAnswer("");
@@ -245,6 +341,7 @@ export function DailyCountryChallenge({ onBack }: { onBack: () => void }) {
       isComplete,
     })) return;
 
+    setHasNewClue(false);
     recordOutcome(puzzle.dateKey, "in-progress", guessesUsed, previousGuesses, [...selectedClueIds, clueId]);
   }
 
@@ -264,8 +361,13 @@ export function DailyCountryChallenge({ onBack }: { onBack: () => void }) {
         <h1 id="daily-country-title" className="sr-only">Daily Challenge Puzzle #{puzzle.puzzleNumber}</h1>
         <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_15rem] lg:items-stretch lg:gap-5">
           <div>
-            {isComplete ? (
-              <section className={(outcome?.status === "solved" ? "border-emerald-300/30 bg-emerald-300/10" : "border-rose-300/30 bg-rose-500/10") + " rounded-3xl border p-5 text-center shadow-glow"} aria-live="polite">
+            <div className="overflow-hidden rounded-3xl border border-amber-300/25 bg-slate-900/80 shadow-glow">
+              <div className="grid min-h-[min(40vh,21rem)] place-items-center p-3 sm:p-4" aria-busy={!showRegionalMap && silhouettePath === undefined}>
+                <BordersMapClue countryCode={puzzle.country.code} fallbackPath={silhouettePath} isolated={!showRegionalMap} revealContext={isComplete && !hasBordersClue} className="h-[min(37vh,19rem)] w-full max-w-lg text-amber-300" />
+              </div>
+            </div>
+            {isComplete && (
+              <section className={(outcome?.status === "solved" ? "border-emerald-300/30 bg-emerald-300/10" : "border-rose-300/30 bg-rose-500/10") + " mt-4 rounded-3xl border p-5 text-center shadow-glow"} aria-live="polite">
                 <p className={(outcome?.status === "solved" ? "text-emerald-300" : "text-rose-200") + " text-xs font-black uppercase tracking-[0.22em]"}>{outcome?.status === "solved" ? "Solved" : "Answer revealed"}</p>
                 <h2 className="mt-2 text-3xl font-black text-white">{puzzle.country.name}</h2>
                 <p className="mt-2 text-sm leading-6 text-slate-300">{outcome?.status === "solved" ? "You solved today’s country in " + guessesUsed + " " + (guessesUsed === 1 ? "guess." : "guesses.") : "Come back tomorrow for a new country."}</p>
@@ -286,28 +388,32 @@ export function DailyCountryChallenge({ onBack }: { onBack: () => void }) {
                       : `I took on Puzzler Daily Challenge #${puzzle.puzzleNumber}. Can you solve it?`}
                     path="/daily-challenge"
                     tone="amber"
-                    onShared={(shareMethod) => void trackDailyCountryShared({
-                      puzzle_number: puzzle.puzzleNumber,
-                      solved: outcome?.status === "solved",
-                      guesses_used: guessesUsed,
-                      share_method: shareMethod,
-                    })}
+                    analytics={{ game: "daily_country" }}
                   />
                   {canReplayInDevelopment && <button type="button" onClick={replayChallenge} className="min-h-12 w-full rounded-xl border border-amber-300/40 bg-amber-300/10 px-4 font-black text-amber-100 transition hover:bg-amber-300/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300">Replay today&apos;s challenge</button>}
                   <button type="button" onClick={abandonChallenge} className="min-h-12 w-full rounded-xl border border-slate-700 bg-slate-900 px-4 font-black text-white transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300">Back to home</button>
                 </div>
               </section>
-            ) : (
-              <div className="overflow-hidden rounded-3xl border border-amber-300/25 bg-slate-900/80 shadow-glow">
-                <div className="grid min-h-[min(40vh,21rem)] place-items-center p-3 sm:p-4" aria-busy={silhouettePath === undefined}>
-                  {silhouettePath ? (
-                    <svg viewBox="0 0 100 100" className="h-[min(37vh,19rem)] w-full max-w-md origin-center scale-105 overflow-visible text-amber-300" role="img" aria-label="Country silhouette clue">
-                      <path d={silhouettePath} fill="currentColor" fillRule="evenodd" />
-                    </svg>
+            )}
+            {!isComplete && (
+              <div className="mt-3 lg:hidden">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHasNewClue(false);
+                    setIsClueDrawerOpen(true);
+                  }}
+                  aria-haspopup="dialog"
+                  aria-expanded={isClueDrawerOpen}
+                  className={`flex min-h-12 w-full items-center justify-between rounded-2xl border bg-slate-900/80 px-4 text-left transition hover:border-cyan-300/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 ${hasNewClue ? "border-cyan-300/70 bg-cyan-300/10 motion-safe:animate-pulse" : "border-cyan-300/25"}`}
+                >
+                  <span className="flex items-center gap-2 text-sm font-black text-cyan-100"><span aria-hidden="true">💡</span> Clues</span>
+                  {availableClueCount > 0 ? (
+                    <span className="flex items-center gap-2"><span className="rounded-full bg-cyan-300/15 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-cyan-200">Available ({availableClueCount})</span><span className="text-lg leading-none text-cyan-200" aria-hidden="true">⌄</span></span>
                   ) : (
-                    <span className="text-sm font-bold text-slate-500">{silhouettePath === undefined ? "Loading outline…" : "Outline unavailable"}</span>
+                    <span className="flex items-center gap-2"><span className="text-xs font-bold tabular-nums text-slate-500">{selectedClueIds.length}/{DAILY_COUNTRY_CLUE_LIMIT} used</span><span className="text-lg leading-none text-slate-400" aria-hidden="true">⌄</span></span>
                   )}
-                </div>
+                </button>
               </div>
             )}
             {!isComplete && (
@@ -317,7 +423,7 @@ export function DailyCountryChallenge({ onBack }: { onBack: () => void }) {
                   <CountryAutocomplete
                     id="daily-country-answer"
                     value={answer}
-                    countries={SOVEREIGN_NATIONS}
+                    countries={remainingGuessCountries}
                     onChange={(value) => {
                       setAnswer(value);
                       setSelectedCountry(null);
@@ -378,67 +484,37 @@ export function DailyCountryChallenge({ onBack }: { onBack: () => void }) {
               )}
             </section>
           </div>
-          <aside className="mt-5 flex overflow-hidden rounded-3xl border border-amber-300/25 bg-slate-900/80 p-3 shadow-glow lg:mt-0" aria-labelledby="daily-country-clues">
-            <div className="flex w-full flex-col">
-              <div className="flex items-center justify-between gap-3">
-                <h2 id="daily-country-clues" className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">Choose clues</h2>
-                <span className="text-xs font-bold tabular-nums text-slate-400">{selectedClueIds.length}/{DAILY_COUNTRY_CLUE_LIMIT}</span>
-              </div>
-              <p className="mt-2 text-xs font-semibold leading-5 text-slate-500">Earn one clue after each incorrect guess. The flag unlocks after three.</p>
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                {clues.map((clue) => {
-                  const selected = selectedClueIds.includes(clue.id);
-                  const canSelect = canSelectDailyCountryClue({
-                    clueId: clue.id,
-                    incorrectGuesses,
-                    selectedClueIds,
-                    isComplete,
-                  });
-                  const requirement = clue.id === "flag" ? 3 : 1;
-                  const locked = !selected && !canSelect;
-
-                  return (
-                    <button
-                      key={clue.id}
-                      type="button"
-                      onClick={() => selectClue(clue.id)}
-                      disabled={!canSelect}
-                      aria-pressed={selected}
-                      title={locked && !isComplete ? `Unlock after ${requirement} incorrect ${requirement === 1 ? "guess" : "guesses"}` : undefined}
-                      className={`min-h-10 rounded-xl border px-2 text-left text-xs font-black transition focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 ${selected ? "cursor-default border-cyan-300/30 bg-cyan-300/10 text-cyan-100 opacity-75" : locked ? "border-slate-800 bg-slate-950/40 text-slate-600" : "border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 hover:text-white"} disabled:cursor-not-allowed`}
-                    >
-                      <span>{clue.label}</span>
-                      {locked && !isComplete && <span className="mt-0.5 block text-[9px] font-bold uppercase tracking-wide">{requirement} wrong</span>}
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="mt-4 flex flex-1 flex-col">
-                {selectedClueIds.length === 0 ? (
-                  <section className="mt-auto border-t border-slate-800 pt-4" aria-labelledby="daily-country-how-to-play">
-                    <h3 id="daily-country-how-to-play" className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">How to play</h3>
-                    <ol className="mt-2 space-y-2 text-xs font-semibold leading-5 text-slate-400">
-                      <li><span className="mr-2 text-cyan-300">1.</span>Study the map outline.</li>
-                      <li><span className="mr-2 text-cyan-300">2.</span>Each incorrect guess unlocks a clue.</li>
-                      <li><span className="mr-2 text-cyan-300">3.</span>Guess the country in six tries.</li>
-                    </ol>
-                  </section>
-                ) : clues.filter((clue) => selectedClueIds.includes(clue.id)).map((clue) => (
-                  <article key={clue.id} className="border-t border-slate-800 py-3">
-                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-300">{clue.label}</p>
-                    {clue.flagCode ? (
-                      <div className="relative mt-2 aspect-[2/1] bg-slate-950">
-                        <Image src={`https://flagcdn.com/${clue.flagCode}.svg`} alt="The mystery country's flag" fill unoptimized sizes="240px" className="object-contain" />
-                      </div>
-                    ) : (
-                      <p className="mt-1 text-xs font-bold leading-5 text-white">{clue.text}</p>
-                    )}
-                  </article>
-                ))}
-              </div>
-            </div>
+          <aside className="mt-5 hidden overflow-hidden rounded-3xl border border-amber-300/25 bg-slate-900/80 p-3 shadow-glow lg:mt-0 lg:flex" aria-labelledby="daily-country-clues">
+            <DailyCountryCluePanel
+              clues={clues}
+              selectedClueIds={selectedClueIds}
+              incorrectGuesses={incorrectGuesses}
+              isComplete={isComplete}
+              headingId="daily-country-clues"
+              onSelect={selectClue}
+            />
           </aside>
         </div>
+
+        {isClueDrawerOpen && !isComplete && (
+          <div className="fixed inset-0 z-50 flex items-end bg-slate-950/70 p-3 backdrop-blur-sm lg:hidden" role="presentation">
+            <button type="button" aria-label="Close clues" className="absolute inset-0 cursor-default" onClick={() => setIsClueDrawerOpen(false)} />
+            <section role="dialog" aria-modal="true" aria-labelledby="daily-country-clue-drawer-title" className="relative z-10 max-h-[80dvh] w-full overflow-y-auto rounded-3xl border border-cyan-300/25 bg-slate-900 p-5 shadow-2xl">
+              <div className="mb-4 flex items-center justify-between gap-4">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Daily Challenge</p>
+                <button type="button" onClick={() => setIsClueDrawerOpen(false)} className="grid h-10 w-10 place-items-center rounded-xl border border-slate-700 text-lg text-slate-300 transition hover:border-cyan-300/50 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300" aria-label="Close clues">×</button>
+              </div>
+              <DailyCountryCluePanel
+                clues={clues}
+                selectedClueIds={selectedClueIds}
+                incorrectGuesses={incorrectGuesses}
+                isComplete={isComplete}
+                headingId="daily-country-clue-drawer-title"
+                onSelect={selectClue}
+              />
+            </section>
+          </div>
+        )}
 
       </section>
     </main>
